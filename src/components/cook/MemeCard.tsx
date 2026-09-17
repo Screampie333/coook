@@ -12,11 +12,19 @@ export type Meme = {
   image: string;
 };
 
+export type CookedResult = {
+  /** data URL gambar tanpa caption. */
+  picture: string;
+  /** Gambar yang sama, masing-masing dengan satu caption. */
+  memes: Meme[];
+};
+
 type MemeCardProps = {
   cooking: boolean;
-  memes: Meme[] | null;
-  selectedIndex: number;
-  onSelect: (index: number) => void;
+  result: CookedResult | null;
+  /** null = tanpa caption. */
+  selectedIndex: number | null;
+  onSelect: (index: number | null) => void;
   onCookAgain: () => void;
   cookAgainDisabled: boolean;
   /** Info kecil di bawah tombol, misalnya sisa jatah. */
@@ -31,12 +39,13 @@ const primaryButton = `${buttonBase} bg-accent text-bg hover:opacity-90`;
 const secondaryButton = `${buttonBase} border border-line bg-panel text-ink hover:border-line-hover disabled:hover:border-line`;
 
 /**
- * Kartu hasil Cook: 1 gambar + 3 caption.
- * Server sudah menempel tiap caption ke gambar, jadi ganti caption = ganti gambar yang ditampilkan.
+ * Kartu hasil Cook: 1 gambar + 3 caption opsional.
+ * Server sudah menyiapkan gambar polos dan gambar dengan tiap caption,
+ * jadi ganti pilihan = ganti gambar yang ditampilkan, tanpa loading.
  */
 export function MemeCard({
   cooking,
-  memes,
+  result,
   selectedIndex,
   onSelect,
   onCookAgain,
@@ -47,17 +56,21 @@ export function MemeCard({
   const groupName = useId();
   const [showServeNote, setShowServeNote] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
-  const selected = memes?.[selectedIndex] ?? null;
+
+  const selectedMeme = selectedIndex === null ? null : (result?.memes[selectedIndex] ?? null);
+  const shownImage = selectedMeme?.image ?? result?.picture ?? null;
 
   async function download() {
-    if (!selected) return;
+    if (!shownImage) return;
     setDownloadFailed(false);
     try {
-      const blob = await (await fetch(selected.image)).blob();
+      const blob = await (await fetch(shownImage)).blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${fileStem}-${selectedIndex + 1}.jpg`;
+      const suffix = selectedIndex === null ? "" : `-caption-${selectedIndex + 1}`;
+      const extension = shownImage.startsWith("data:image/png") ? "png" : "jpg";
+      link.download = `${fileStem}${suffix}.${extension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -69,7 +82,7 @@ export function MemeCard({
 
   return (
     <div aria-live="polite" aria-busy={cooking}>
-      <Card icon={ImageIcon} title="Your meme" right={cooking ? "Cooking…" : "Pick your caption"}>
+      <Card icon={ImageIcon} title="Your meme" right={cooking ? "Cooking…" : "Caption is optional"}>
         <div className="@container">
           <div className="grid gap-5 p-4 @2xl:grid-cols-2">
             {/* Gambar */}
@@ -86,10 +99,10 @@ export function MemeCard({
                   </div>
                 </>
               )}
-              {!cooking && selected && (
+              {!cooking && shownImage && (
                 <Image
-                  src={selected.image}
-                  alt={`Meme with the caption: ${selected.caption}`}
+                  src={shownImage}
+                  alt={selectedMeme ? `Meme with the caption: ${selectedMeme.caption}` : "Meme picture without a caption"}
                   width={1024}
                   height={1024}
                   unoptimized
@@ -101,24 +114,34 @@ export function MemeCard({
             {/* Caption + tombol */}
             <div className="flex min-w-0 flex-col gap-4">
               <fieldset className="flex min-w-0 flex-col gap-2">
-                <legend className="sr-only">Pick a caption for your meme</legend>
+                <legend className="sr-only">Add a caption to your meme (optional)</legend>
                 <p className="text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
-                  {cooking ? "Writing captions" : "Captions"}
+                  {cooking ? "Writing captions" : "Caption (optional)"}
                 </p>
-                {cooking
-                  ? Array.from({ length: CAPTION_COUNT }, (_, index) => <SkeletonRow key={index} index={index} />)
-                  : memes?.map((meme, index) => (
-                      <CaptionRow
+                {cooking ? (
+                  Array.from({ length: CAPTION_COUNT }, (_, index) => <SkeletonRow key={index} index={index} />)
+                ) : (
+                  <>
+                    <OptionRow
+                      name={groupName}
+                      caption={null}
+                      selected={selectedIndex === null}
+                      onSelect={() => onSelect(null)}
+                    />
+                    {result?.memes.map((meme, index) => (
+                      <OptionRow
                         key={`${index}-${meme.caption}`}
-                        caption={meme.caption}
                         name={groupName}
+                        caption={meme.caption}
                         selected={index === selectedIndex}
                         onSelect={() => onSelect(index)}
                       />
                     ))}
+                  </>
+                )}
               </fieldset>
 
-              {!cooking && selected && (
+              {!cooking && shownImage && (
                 <div className="flex flex-col gap-2.5">
                   <button type="button" onClick={download} className={`${primaryButton} w-full`}>
                     <Download className="size-4" />
@@ -174,28 +197,23 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
-type CaptionRowProps = {
-  caption: string;
+type OptionRowProps = {
   name: string;
+  /** null = pilihan "No caption". */
+  caption: string | null;
   selected: boolean;
   onSelect: () => void;
 };
 
-function CaptionRow({ caption, name, selected, onSelect }: CaptionRowProps) {
+function OptionRow({ name, caption, selected, onSelect }: OptionRowProps) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-[10px] border pr-2 transition-colors ${
+      className={`flex min-h-12 items-center gap-2 rounded-[10px] border pr-2 transition-colors ${
         selected ? "border-accent bg-accent-soft" : "border-line hover:border-line-hover"
       }`}
     >
       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 pl-3">
-        <input
-          type="radio"
-          name={name}
-          checked={selected}
-          onChange={onSelect}
-          className="peer sr-only"
-        />
+        <input type="radio" name={name} checked={selected} onChange={onSelect} className="peer sr-only" />
         <span
           aria-hidden="true"
           className={`flex size-4.5 flex-none items-center justify-center rounded-full border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-panel ${
@@ -204,9 +222,13 @@ function CaptionRow({ caption, name, selected, onSelect }: CaptionRowProps) {
         >
           {selected && <span className="size-2 rounded-full bg-accent" />}
         </span>
-        <span className="min-w-0 flex-1 text-sm leading-snug break-words text-ink">{caption}</span>
+        {caption === null ? (
+          <span className="min-w-0 flex-1 text-sm text-muted">No caption, just the picture</span>
+        ) : (
+          <span className="min-w-0 flex-1 text-sm leading-snug break-words text-ink">{caption}</span>
+        )}
       </label>
-      <CopyButton text={caption} />
+      {caption !== null && <CopyButton text={caption} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateImage } from "@/lib/ai";
+import { generateImage, type GenerateImageResult } from "@/lib/ai";
 import { cookCaptions } from "./captions";
 import { addCaptionToImage } from "./meme-overlay";
 import { buildImagePrompt, describeScene } from "./scene";
@@ -11,6 +11,7 @@ import { buildImagePrompt, describeScene } from "./scene";
  * 2. AI gambar menggambar adegan itu, tanpa tulisan.
  * 3. AI teks menulis 3 caption untuk gambar tersebut.
  * 4. Kode menempel tiap caption ke gambar yang sama → 3 versi meme.
+ * Gambar polos (tanpa caption) juga dikembalikan, karena caption itu opsional.
  */
 
 export type CookedMeme = {
@@ -19,12 +20,19 @@ export type CookedMeme = {
   image: Buffer;
 };
 
+export type CookResult = {
+  /** Gambar asli tanpa caption. */
+  picture: { data: Buffer; mimeType: GenerateImageResult["mimeType"] };
+  /** Gambar yang sama, masing-masing dengan satu caption. */
+  memes: CookedMeme[];
+};
+
 /**
  * @param idea ide yang SUDAH divalidasi dan dirapikan (lihat normalizeIdea).
  * @throws IdeaRejectedError kalau idenya melanggar aturan.
  * @throws AiError kalau salah satu AI gagal (rate limit, kuota habis, timeout, dll.).
  */
-export async function cookMeme(idea: string): Promise<CookedMeme[]> {
+export async function cookMeme(idea: string): Promise<CookResult> {
   const started = Date.now();
 
   const scene = await describeScene(idea);
@@ -45,5 +53,5 @@ export async function cookMeme(idea: string): Promise<CookedMeme[]> {
       `image ${afterImage - afterScene}ms, captions ${afterCaptions - afterImage}ms, ` +
       `overlay ${Date.now() - afterCaptions}ms`,
   );
-  return memes;
+  return { picture: { data: picture.data, mimeType: picture.mimeType }, memes };
 }

@@ -17,7 +17,11 @@ import { requireUser } from "@/lib/privy-server";
 /**
  * POST /api/cook
  * Body: { "idea": "..." }
- * Hasil: { "memes": [{ "caption": "...", "image": "data:image/jpeg;base64,..." }, x3], "quota": {...} }
+ * Hasil: {
+ *   "picture": "data:image/jpeg;base64,...",   ← gambar tanpa caption
+ *   "memes": [{ "caption": "...", "image": "data:image/jpeg;base64,..." }, x3],   ← gambar + caption
+ *   "quota": {...}
+ * }
  * Error: { "error": "pesan untuk user", "code": "...", "quota"?: {...}, "resetsAt"?: "...", "retryAfterSeconds"?: number }
  *
  * Urutan: adegan (Groq) → gambar (Cloudflare) → 3 caption (Groq) → tempel caption (kode).
@@ -76,13 +80,11 @@ export async function POST(request: Request) {
 
   // 5. Masak meme. Kalau langkah mana pun gagal, jatahnya dikembalikan.
   try {
-    const memes = await cookMeme(parsed.data.idea);
+    const { picture, memes } = await cookMeme(parsed.data.idea);
     return NextResponse.json(
       {
-        memes: memes.map((meme) => ({
-          caption: meme.caption,
-          image: `data:image/jpeg;base64,${meme.image.toString("base64")}`,
-        })),
+        picture: toDataUrl(picture.data, picture.mimeType),
+        memes: memes.map((meme) => ({ caption: meme.caption, image: toDataUrl(meme.image, "image/jpeg") })),
         quota: reserved.quota,
       },
       { headers: { "Cache-Control": "no-store" } },
@@ -99,4 +101,8 @@ export async function POST(request: Request) {
     }
     return aiErrorResponse(error, "api/cook", { quota });
   }
+}
+
+function toDataUrl(data: Buffer, mimeType: string) {
+  return `data:${mimeType};base64,${data.toString("base64")}`;
 }

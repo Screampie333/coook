@@ -14,7 +14,7 @@ import {
   normalizeIdea,
   type ImageQuota,
 } from "@/lib/cook/limits";
-import { MemeCard, type Meme } from "./MemeCard";
+import { MemeCard, type CookedResult, type Meme } from "./MemeCard";
 import { setImageQuota, useImageQuota } from "./quota-store";
 
 type AuthState =
@@ -56,9 +56,9 @@ function CookPanel({ auth }: { auth: AuthState }) {
   const [cooking, setCooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hasil Cook terakhir
-  const [memes, setMemes] = useState<Meme[] | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  // Hasil Cook terakhir. selectedIndex null = tanpa caption (default).
+  const [cooked, setCooked] = useState<CookedResult | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [cookedIdea, setCookedIdea] = useState<string | null>(null);
   const [fileStem, setFileStem] = useState("coook-meme");
 
@@ -101,8 +101,8 @@ function CookPanel({ auth }: { auth: AuthState }) {
       const result = await requestMeme(cleanIdea);
       if (result.quota) setImageQuota(result.quota);
       if (result.ok) {
-        setMemes(result.memes);
-        setSelectedIndex(0);
+        setCooked(result.cooked);
+        setSelectedIndex(null);
         setCookedIdea(cleanIdea);
         setFileStem(memeFileStem());
       } else {
@@ -205,11 +205,11 @@ function CookPanel({ auth }: { auth: AuthState }) {
         </form>
       </Card>
 
-      {(cooking || memes) && (
+      {(cooking || cooked) && (
         <MemeCard
           key={fileStem}
           cooking={cooking}
-          memes={memes}
+          result={cooked}
           selectedIndex={selectedIndex}
           onSelect={setSelectedIndex}
           onCookAgain={() => {
@@ -269,7 +269,7 @@ function resetPhrase(resetsAt: unknown) {
 }
 
 type CookResult =
-  | { ok: true; memes: Meme[]; quota: ImageQuota | null }
+  | { ok: true; cooked: CookedResult; quota: ImageQuota | null }
   | {
       ok: false;
       message: string;
@@ -279,18 +279,21 @@ type CookResult =
       ovenClosedUntil?: string;
     };
 
-/** Mengecek bentuk hasil meme dari API. */
-function parseMemes(value: unknown): Meme[] | null {
-  if (!Array.isArray(value) || value.length !== CAPTION_COUNT) return null;
+const isImageDataUrl = (value: unknown): value is string =>
+  typeof value === "string" && value.startsWith("data:image/");
+
+/** Mengecek bentuk hasil Cook dari API: gambar polos + 3 gambar bercaption. */
+function parseCooked(picture: unknown, memesValue: unknown): CookedResult | null {
+  if (!isImageDataUrl(picture)) return null;
+  if (!Array.isArray(memesValue) || memesValue.length !== CAPTION_COUNT) return null;
+
   const memes: Meme[] = [];
-  for (const item of value) {
+  for (const item of memesValue) {
     const meme = item as Partial<Meme> | null;
-    if (typeof meme?.caption !== "string" || typeof meme.image !== "string" || !meme.image.startsWith("data:image/")) {
-      return null;
-    }
+    if (typeof meme?.caption !== "string" || !isImageDataUrl(meme.image)) return null;
     memes.push({ caption: meme.caption, image: meme.image });
   }
-  return memes;
+  return { picture, memes };
 }
 
 /** Memanggil POST /api/cook. Tidak pernah melempar error; semua kegagalan jadi pesan yang jelas. */
@@ -307,6 +310,7 @@ async function requestMeme(idea: string): Promise<CookResult> {
   }
 
   const body = (await response.json().catch(() => null)) as {
+    picture?: unknown;
     memes?: unknown;
     error?: unknown;
     code?: unknown;
@@ -317,8 +321,8 @@ async function requestMeme(idea: string): Promise<CookResult> {
   const quota = isImageQuota(body?.quota) ? body.quota : null;
 
   if (response.ok) {
-    const memes = parseMemes(body?.memes);
-    if (memes) return { ok: true, memes, quota };
+    const cooked = parseCooked(body?.picture, body?.memes);
+    if (cooked) return { ok: true, cooked, quota };
   }
 
   if (response.status === 401) {
