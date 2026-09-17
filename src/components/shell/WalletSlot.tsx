@@ -1,25 +1,26 @@
-import { Wallet } from "lucide-react";
+"use client";
 
-/**
- * Placeholder area wallet. Tombol Connect asli (Privy) dipasang di Step 2,
- * dan sisa kuota akan diambil dari server.
- */
+import { usePrivy } from "@privy-io/react-auth";
+import { ConnectButton } from "@/components/auth/ConnectButton";
+import { usePrivyEnabled } from "@/components/auth/PrivyProviders";
+
+/** Grup Wallet di sidebar: tombol Connect + status kuota (kuota masih placeholder). */
 export function WalletSlot() {
+  const enabled = usePrivyEnabled();
+
   return (
     <div className="flex flex-col gap-3">
-      <button
-        type="button"
-        disabled
-        title="Wallet login arrives in Step 2"
-        className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-bold text-bg opacity-60"
-      >
-        <Wallet className="size-4" />
-        <span>Connect wallet</span>
-      </button>
-
-      <StatusDot state="idle" text="Quota: —" />
+      <ConnectButton />
+      {enabled ? <QuotaStatus /> : <StatusDot state="idle" text="Quota: —" />}
     </div>
   );
+}
+
+function QuotaStatus() {
+  const { ready, authenticated } = usePrivy();
+  // Angka kuota asli akan diambil dari server di step berikutnya.
+  if (ready && authenticated) return <StatusDot state="success" text="Quota: —" />;
+  return <StatusDot state="idle" text="Quota: —" />;
 }
 
 type StatusState = "idle" | "live" | "success";

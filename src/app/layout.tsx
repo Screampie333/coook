@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bungee, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { PrivyProviders } from "@/components/auth/PrivyProviders";
 import { AppShell } from "@/components/shell/AppShell";
 import "./globals.css";
 
@@ -37,7 +38,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${bungee.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <AppShell>{children}</AppShell>
+        <PrivyProviders>
+          <AppShell>{children}</AppShell>
+        </PrivyProviders>
       </body>
     </html>
   );

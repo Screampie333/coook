@@ -1,5 +1,7 @@
 import { CookingPot } from "lucide-react";
 import type { Metadata } from "next";
+import { RequireLogin } from "@/components/auth/RequireLogin";
+import { SessionCheck } from "@/components/auth/SessionCheck";
 import { Card, CardEmpty } from "@/components/ui/Card";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -22,9 +24,12 @@ export default function KitchenPage() {
 
       <Block>
         <SectionTitle title="Your memes" sub="Saved memes will show up here." />
-        <Card icon={CookingPot} title="Your memes" right={<span className="font-mono">0</span>}>
-          <CardEmpty>The pot is empty.</CardEmpty>
-        </Card>
+        <RequireLogin>
+          <Card icon={CookingPot} title="Your memes" right={<span className="font-mono">0</span>}>
+            <CardEmpty>The pot is empty.</CardEmpty>
+          </Card>
+          <SessionCheck />
+        </RequireLogin>
       </Block>
     </>
   );

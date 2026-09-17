@@ -2,13 +2,10 @@
 
 import { Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { shortenAddress } from "@/lib/format";
 
 // Alamat contract diisi lewat .env.local. Kosong = belum launch.
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? "";
-
-function shorten(address: string) {
-  return `${address.slice(0, 4)}…${address.slice(-4)}`;
-}
 
 /** Tombol untuk menyalin contract address koin Coook. */
 export function ContractButton() {
@@ -36,7 +33,7 @@ export function ContractButton() {
     }
   }
 
-  const label = flash?.text ?? (CONTRACT_ADDRESS ? shorten(CONTRACT_ADDRESS) : "Coming soon");
+  const label = flash?.text ?? (CONTRACT_ADDRESS ? shortenAddress(CONTRACT_ADDRESS) : "Coming soon");
 
   return (
     <button
