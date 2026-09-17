@@ -2,7 +2,6 @@ import "server-only";
 
 import { generateImage, type GenerateImageResult } from "@/lib/ai";
 import { cookCaptions } from "./captions";
-import { addCaptionToImage } from "./meme-overlay";
 import { buildImagePrompt, describeScene } from "./scene";
 
 /**
@@ -10,21 +9,15 @@ import { buildImagePrompt, describeScene } from "./scene";
  * 1. AI teks menulis adegan dari ide (dan menolak ide yang melanggar aturan).
  * 2. AI gambar menggambar adegan itu, tanpa tulisan.
  * 3. AI teks menulis 3 caption untuk gambar tersebut.
- * 4. Kode menempel tiap caption ke gambar yang sama → 3 versi meme.
- * Gambar polos (tanpa caption) juga dikembalikan, karena caption itu opsional.
+ * Caption ditempel ke gambar di browser (lihat src/lib/cook/caption-layout.ts),
+ * karena caption itu opsional dan user juga bisa menulis caption sendiri.
  */
-
-export type CookedMeme = {
-  caption: string;
-  /** JPEG yang sudah ada caption-nya. */
-  image: Buffer;
-};
 
 export type CookResult = {
   /** Gambar asli tanpa caption. */
   picture: { data: Buffer; mimeType: GenerateImageResult["mimeType"] };
-  /** Gambar yang sama, masing-masing dengan satu caption. */
-  memes: CookedMeme[];
+  /** 3 caption yang ditulis untuk gambar itu. */
+  captions: string[];
 };
 
 /**
@@ -42,16 +35,11 @@ export async function cookMeme(idea: string): Promise<CookResult> {
   const afterImage = Date.now();
 
   const captions = await cookCaptions({ idea, scene });
-  const afterCaptions = Date.now();
-
-  const memes = await Promise.all(
-    captions.map(async (caption) => ({ caption, image: await addCaptionToImage(picture.data, caption) })),
-  );
 
   console.info(
     `[cook/meme] ${picture.provider}/${picture.model}: scene ${afterScene - started}ms, ` +
-      `image ${afterImage - afterScene}ms, captions ${afterCaptions - afterImage}ms, ` +
-      `overlay ${Date.now() - afterCaptions}ms`,
+      `image ${afterImage - afterScene}ms, captions ${Date.now() - afterImage}ms, ` +
+      `${Math.round(picture.data.length / 1024)} KB`,
   );
-  return { picture: { data: picture.data, mimeType: picture.mimeType }, memes };
+  return { picture: { data: picture.data, mimeType: picture.mimeType }, captions };
 }

@@ -9,6 +9,9 @@ export const IDEA_MAX_LENGTH = 200;
 /** Jumlah caption yang dihasilkan setiap kali Cook. */
 export const CAPTION_COUNT = 3;
 
+/** Panjang maksimal caption yang ditulis user sendiri. */
+export const CUSTOM_CAPTION_MAX_LENGTH = 120;
+
 /** Batas gambar meme per wallet per hari (reset 00:00 UTC). */
 export const IMAGE_DAILY_LIMIT = 5;
 

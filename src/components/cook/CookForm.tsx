@@ -14,7 +14,7 @@ import {
   normalizeIdea,
   type ImageQuota,
 } from "@/lib/cook/limits";
-import { MemeCard, type CookedResult, type Meme } from "./MemeCard";
+import { MemeCard, type CaptionChoice, type CookedResult } from "./MemeCard";
 import { setImageQuota, useImageQuota } from "./quota-store";
 
 type AuthState =
@@ -56,9 +56,10 @@ function CookPanel({ auth }: { auth: AuthState }) {
   const [cooking, setCooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hasil Cook terakhir. selectedIndex null = tanpa caption (default).
+  // Hasil Cook terakhir. Default tanpa caption; tulisan custom tetap disimpan antar-Cook.
   const [cooked, setCooked] = useState<CookedResult | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [choice, setChoice] = useState<CaptionChoice>({ kind: "none" });
+  const [customCaption, setCustomCaption] = useState("");
   const [cookedIdea, setCookedIdea] = useState<string | null>(null);
   const [fileStem, setFileStem] = useState("coook-meme");
 
@@ -102,7 +103,7 @@ function CookPanel({ auth }: { auth: AuthState }) {
       if (result.quota) setImageQuota(result.quota);
       if (result.ok) {
         setCooked(result.cooked);
-        setSelectedIndex(null);
+        setChoice({ kind: "none" });
         setCookedIdea(cleanIdea);
         setFileStem(memeFileStem());
       } else {
@@ -210,8 +211,10 @@ function CookPanel({ auth }: { auth: AuthState }) {
           key={fileStem}
           cooking={cooking}
           result={cooked}
-          selectedIndex={selectedIndex}
-          onSelect={setSelectedIndex}
+          choice={choice}
+          onChoose={setChoice}
+          customCaption={customCaption}
+          onCustomCaptionChange={setCustomCaption}
           onCookAgain={() => {
             if (cookedIdea) void cook(cookedIdea);
           }}
@@ -279,21 +282,17 @@ type CookResult =
       ovenClosedUntil?: string;
     };
 
-const isImageDataUrl = (value: unknown): value is string =>
-  typeof value === "string" && value.startsWith("data:image/");
-
-/** Mengecek bentuk hasil Cook dari API: gambar polos + 3 gambar bercaption. */
-function parseCooked(picture: unknown, memesValue: unknown): CookedResult | null {
-  if (!isImageDataUrl(picture)) return null;
-  if (!Array.isArray(memesValue) || memesValue.length !== CAPTION_COUNT) return null;
-
-  const memes: Meme[] = [];
-  for (const item of memesValue) {
-    const meme = item as Partial<Meme> | null;
-    if (typeof meme?.caption !== "string" || !isImageDataUrl(meme.image)) return null;
-    memes.push({ caption: meme.caption, image: meme.image });
+/** Mengecek bentuk hasil Cook dari API: gambar polos + 3 caption. */
+function parseCooked(picture: unknown, captions: unknown): CookedResult | null {
+  if (typeof picture !== "string" || !picture.startsWith("data:image/")) return null;
+  if (
+    !Array.isArray(captions) ||
+    captions.length !== CAPTION_COUNT ||
+    !captions.every((caption): caption is string => typeof caption === "string")
+  ) {
+    return null;
   }
-  return { picture, memes };
+  return { picture, captions };
 }
 
 /** Memanggil POST /api/cook. Tidak pernah melempar error; semua kegagalan jadi pesan yang jelas. */
@@ -311,7 +310,7 @@ async function requestMeme(idea: string): Promise<CookResult> {
 
   const body = (await response.json().catch(() => null)) as {
     picture?: unknown;
-    memes?: unknown;
+    captions?: unknown;
     error?: unknown;
     code?: unknown;
     retryAfterSeconds?: unknown;
@@ -321,7 +320,7 @@ async function requestMeme(idea: string): Promise<CookResult> {
   const quota = isImageQuota(body?.quota) ? body.quota : null;
 
   if (response.ok) {
-    const cooked = parseCooked(body?.picture, body?.memes);
+    const cooked = parseCooked(body?.picture, body?.captions);
     if (cooked) return { ok: true, cooked, quota };
   }
 

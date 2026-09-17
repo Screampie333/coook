@@ -19,15 +19,15 @@ import { requireUser } from "@/lib/privy-server";
  * Body: { "idea": "..." }
  * Hasil: {
  *   "picture": "data:image/jpeg;base64,...",   ← gambar tanpa caption
- *   "memes": [{ "caption": "...", "image": "data:image/jpeg;base64,..." }, x3],   ← gambar + caption
+ *   "captions": ["...", "...", "..."],         ← ditempel di browser kalau user memilihnya
  *   "quota": {...}
  * }
  * Error: { "error": "pesan untuk user", "code": "...", "quota"?: {...}, "resetsAt"?: "...", "retryAfterSeconds"?: number }
  *
- * Urutan: adegan (Groq) → gambar (Cloudflare) → 3 caption (Groq) → tempel caption (kode).
+ * Urutan: adegan (Groq) → gambar (Cloudflare) → 3 caption (Groq).
  */
 
-// Adegan + gambar (timeout 30 detik) + caption + tempel caption.
+// Adegan + gambar (timeout 30 detik) + caption.
 export const maxDuration = 60;
 
 const bodySchema = z.object({
@@ -80,11 +80,11 @@ export async function POST(request: Request) {
 
   // 5. Masak meme. Kalau langkah mana pun gagal, jatahnya dikembalikan.
   try {
-    const { picture, memes } = await cookMeme(parsed.data.idea);
+    const { picture, captions } = await cookMeme(parsed.data.idea);
     return NextResponse.json(
       {
-        picture: toDataUrl(picture.data, picture.mimeType),
-        memes: memes.map((meme) => ({ caption: meme.caption, image: toDataUrl(meme.image, "image/jpeg") })),
+        picture: `data:${picture.mimeType};base64,${picture.data.toString("base64")}`,
+        captions,
         quota: reserved.quota,
       },
       { headers: { "Cache-Control": "no-store" } },
@@ -101,8 +101,4 @@ export async function POST(request: Request) {
     }
     return aiErrorResponse(error, "api/cook", { quota });
   }
-}
-
-function toDataUrl(data: Buffer, mimeType: string) {
-  return `data:${mimeType};base64,${data.toString("base64")}`;
 }

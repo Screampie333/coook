@@ -1,30 +1,30 @@
 "use client";
 
-import { Check, Copy, Download, ImageIcon, Loader2, RefreshCw, Rocket } from "lucide-react";
+import { Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { CAPTION_COUNT } from "@/lib/cook/limits";
-
-export type Meme = {
-  caption: string;
-  /** data URL JPEG yang sudah ada caption-nya. */
-  image: string;
-};
+import { hasDrawableText } from "@/lib/cook/caption-layout";
+import { CAPTION_COUNT, CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
+import { renderMeme } from "./render-meme";
 
 export type CookedResult = {
   /** data URL gambar tanpa caption. */
   picture: string;
-  /** Gambar yang sama, masing-masing dengan satu caption. */
-  memes: Meme[];
+  /** 3 caption dari AI. */
+  captions: string[];
 };
+
+/** Caption yang dipakai: tidak ada, salah satu caption AI, atau tulisan user sendiri. */
+export type CaptionChoice = { kind: "none" } | { kind: "ai"; index: number } | { kind: "custom" };
 
 type MemeCardProps = {
   cooking: boolean;
   result: CookedResult | null;
-  /** null = tanpa caption. */
-  selectedIndex: number | null;
-  onSelect: (index: number | null) => void;
+  choice: CaptionChoice;
+  onChoose: (choice: CaptionChoice) => void;
+  customCaption: string;
+  onCustomCaptionChange: (text: string) => void;
   onCookAgain: () => void;
   cookAgainDisabled: boolean;
   /** Info kecil di bawah tombol, misalnya sisa jatah. */
@@ -33,21 +33,22 @@ type MemeCardProps = {
   fileStem: string;
 };
 
+/** Jeda setelah berhenti mengetik sebelum preview digambar ulang. */
+const CUSTOM_RENDER_DELAY_MS = 150;
+
 const buttonBase =
   "inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 const primaryButton = `${buttonBase} bg-accent text-bg hover:opacity-90`;
 const secondaryButton = `${buttonBase} border border-line bg-panel text-ink hover:border-line-hover disabled:hover:border-line`;
 
-/**
- * Kartu hasil Cook: 1 gambar + 3 caption opsional.
- * Server sudah menyiapkan gambar polos dan gambar dengan tiap caption,
- * jadi ganti pilihan = ganti gambar yang ditampilkan, tanpa loading.
- */
+/** Kartu hasil Cook: 1 gambar + caption opsional (dari AI atau tulisan sendiri). */
 export function MemeCard({
   cooking,
   result,
-  selectedIndex,
-  onSelect,
+  choice,
+  onChoose,
+  customCaption,
+  onCustomCaptionChange,
   onCookAgain,
   cookAgainDisabled,
   hint,
@@ -56,19 +57,52 @@ export function MemeCard({
   const groupName = useId();
   const [showServeNote, setShowServeNote] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const [rendered, setRendered] = useState<{ picture: string; caption: string; image: string } | null>(null);
+  const [renderFailed, setRenderFailed] = useState(false);
 
-  const selectedMeme = selectedIndex === null ? null : (result?.memes[selectedIndex] ?? null);
-  const shownImage = selectedMeme?.image ?? result?.picture ?? null;
+  const captionText =
+    choice.kind === "ai" ? (result?.captions[choice.index] ?? "") : choice.kind === "custom" ? customCaption : "";
+  const withCaption = hasDrawableText(captionText);
+
+  // Gambar ulang preview setiap kali caption atau gambar berubah.
+  useEffect(() => {
+    if (!result || !withCaption) return;
+    let cancelled = false;
+    const timer = setTimeout(
+      () => {
+        setRenderFailed(false);
+        renderMeme(result.picture, captionText).then(
+          (image) => {
+            if (!cancelled) setRendered({ picture: result.picture, caption: captionText, image });
+          },
+          () => {
+            if (!cancelled) setRenderFailed(true);
+          },
+        );
+      },
+      choice.kind === "custom" ? CUSTOM_RENDER_DELAY_MS : 0,
+    );
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [result, captionText, withCaption, choice.kind]);
+
+  const renderedForPicture = rendered && result && rendered.picture === result.picture ? rendered : null;
+  const upToDate = !withCaption || renderedForPicture?.caption === captionText;
+  const shownImage = !result ? null : withCaption ? (renderedForPicture?.image ?? result.picture) : result.picture;
+  const updating = withCaption && !upToDate && !renderFailed;
+  const canDownload = shownImage !== null && upToDate && !renderFailed;
 
   async function download() {
-    if (!shownImage) return;
+    if (!canDownload || !shownImage) return;
     setDownloadFailed(false);
     try {
       const blob = await (await fetch(shownImage)).blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const suffix = selectedIndex === null ? "" : `-caption-${selectedIndex + 1}`;
+      const suffix = !withCaption ? "" : choice.kind === "ai" ? `-caption-${choice.index + 1}` : "-custom";
       const extension = shownImage.startsWith("data:image/png") ? "png" : "jpg";
       link.download = `${fileStem}${suffix}.${extension}`;
       document.body.appendChild(link);
@@ -100,14 +134,22 @@ export function MemeCard({
                 </>
               )}
               {!cooking && shownImage && (
-                <Image
-                  src={shownImage}
-                  alt={selectedMeme ? `Meme with the caption: ${selectedMeme.caption}` : "Meme picture without a caption"}
-                  width={1024}
-                  height={1024}
-                  unoptimized
-                  className="size-full object-cover"
-                />
+                <>
+                  <Image
+                    src={shownImage}
+                    alt={withCaption ? `Meme with the caption: ${captionText}` : "Meme picture without a caption"}
+                    width={1024}
+                    height={1024}
+                    unoptimized
+                    className="size-full object-cover"
+                  />
+                  {updating && (
+                    <span className="absolute top-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-bg/80 px-2.5 py-1 text-[11px] text-muted">
+                      <Loader2 className="size-3 animate-spin" />
+                      Updating
+                    </span>
+                  )}
+                </>
               )}
             </div>
 
@@ -124,27 +166,44 @@ export function MemeCard({
                   <>
                     <OptionRow
                       name={groupName}
-                      caption={null}
-                      selected={selectedIndex === null}
-                      onSelect={() => onSelect(null)}
-                    />
-                    {result?.memes.map((meme, index) => (
+                      selected={choice.kind === "none"}
+                      onSelect={() => onChoose({ kind: "none" })}
+                    >
+                      <span className="min-w-0 flex-1 text-sm text-muted">No caption, just the picture</span>
+                    </OptionRow>
+
+                    {result?.captions.map((caption, index) => (
                       <OptionRow
-                        key={`${index}-${meme.caption}`}
+                        key={`${index}-${caption}`}
                         name={groupName}
-                        caption={meme.caption}
-                        selected={index === selectedIndex}
-                        onSelect={() => onSelect(index)}
-                      />
+                        selected={choice.kind === "ai" && choice.index === index}
+                        onSelect={() => onChoose({ kind: "ai", index })}
+                        after={<CopyButton text={caption} />}
+                      >
+                        <span className="min-w-0 flex-1 text-sm leading-snug break-words text-ink">{caption}</span>
+                      </OptionRow>
                     ))}
+
+                    <CustomCaptionRow
+                      name={groupName}
+                      selected={choice.kind === "custom"}
+                      onSelect={() => onChoose({ kind: "custom" })}
+                      text={customCaption}
+                      onTextChange={onCustomCaptionChange}
+                    />
                   </>
                 )}
               </fieldset>
 
-              {!cooking && shownImage && (
+              {!cooking && result && (
                 <div className="flex flex-col gap-2.5">
-                  <button type="button" onClick={download} className={`${primaryButton} w-full`}>
-                    <Download className="size-4" />
+                  <button
+                    type="button"
+                    onClick={download}
+                    disabled={!canDownload}
+                    className={`${primaryButton} w-full`}
+                  >
+                    {updating ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                     <span>Download</span>
                   </button>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -164,6 +223,11 @@ export function MemeCard({
                   </div>
 
                   {hint && <p className="text-center font-mono text-xs text-dim">{hint}</p>}
+                  {renderFailed && (
+                    <p role="alert" className="text-center text-[13px] text-warn">
+                      Couldn&apos;t draw the caption. Check your connection and try again.
+                    </p>
+                  )}
                   {downloadFailed && (
                     <p role="alert" className="text-center text-[13px] text-warn">
                       Download failed. Right-click the image and save it instead.
@@ -197,38 +261,93 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
-type OptionRowProps = {
-  name: string;
-  /** null = pilihan "No caption". */
-  caption: string | null;
-  selected: boolean;
-  onSelect: () => void;
-};
+function rowClass(selected: boolean) {
+  return `rounded-[10px] border transition-colors ${
+    selected ? "border-accent bg-accent-soft" : "border-line hover:border-line-hover"
+  }`;
+}
 
-function OptionRow({ name, caption, selected, onSelect }: OptionRowProps) {
+function RadioDot({ selected }: { selected: boolean }) {
   return (
-    <div
-      className={`flex min-h-12 items-center gap-2 rounded-[10px] border pr-2 transition-colors ${
-        selected ? "border-accent bg-accent-soft" : "border-line hover:border-line-hover"
+    <span
+      aria-hidden="true"
+      className={`flex size-4.5 flex-none items-center justify-center rounded-full border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-panel ${
+        selected ? "border-accent" : "border-line-hover"
       }`}
     >
+      {selected && <span className="size-2 rounded-full bg-accent" />}
+    </span>
+  );
+}
+
+type OptionRowProps = {
+  name: string;
+  selected: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+  /** Elemen di kanan baris, di luar label (misalnya tombol copy). */
+  after?: React.ReactNode;
+};
+
+function OptionRow({ name, selected, onSelect, children, after }: OptionRowProps) {
+  return (
+    <div className={`flex min-h-12 items-center gap-2 pr-2 ${rowClass(selected)}`}>
       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 pl-3">
         <input type="radio" name={name} checked={selected} onChange={onSelect} className="peer sr-only" />
-        <span
-          aria-hidden="true"
-          className={`flex size-4.5 flex-none items-center justify-center rounded-full border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-panel ${
-            selected ? "border-accent" : "border-line-hover"
-          }`}
-        >
-          {selected && <span className="size-2 rounded-full bg-accent" />}
-        </span>
-        {caption === null ? (
-          <span className="min-w-0 flex-1 text-sm text-muted">No caption, just the picture</span>
-        ) : (
-          <span className="min-w-0 flex-1 text-sm leading-snug break-words text-ink">{caption}</span>
-        )}
+        <RadioDot selected={selected} />
+        {children}
       </label>
-      {caption !== null && <CopyButton text={caption} />}
+      {after}
+    </div>
+  );
+}
+
+type CustomCaptionRowProps = {
+  name: string;
+  selected: boolean;
+  onSelect: () => void;
+  text: string;
+  onTextChange: (text: string) => void;
+};
+
+function CustomCaptionRow({ name, selected, onSelect, text, onTextChange }: CustomCaptionRowProps) {
+  return (
+    <div className={rowClass(selected)}>
+      <label className="flex cursor-pointer items-center gap-3 px-3 pt-3 pb-2">
+        <input type="radio" name={name} checked={selected} onChange={onSelect} className="peer sr-only" />
+        <RadioDot selected={selected} />
+        <span className="inline-flex items-center gap-1.5 text-sm text-ink">
+          <PenLine className="size-3.5 text-dim" />
+          Write your own
+        </span>
+      </label>
+      <div className="px-3 pb-3">
+        <textarea
+          aria-label="Your own caption"
+          value={text}
+          onFocus={() => {
+            if (!selected) onSelect();
+          }}
+          onChange={(event) => {
+            onTextChange(event.target.value);
+            if (!selected) onSelect();
+          }}
+          onKeyDown={(event) => {
+            // Cukup satu Enter: baris pertama di atas, sisanya di bawah.
+            if (event.key === "Enter" && text.includes("\n")) event.preventDefault();
+          }}
+          maxLength={CUSTOM_CAPTION_MAX_LENGTH}
+          rows={2}
+          placeholder={"top text\nbottom text"}
+          className="w-full resize-none rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm text-ink placeholder:text-dim focus:border-accent focus:outline-hidden"
+        />
+        <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-dim">
+          <span>Press Enter to split top and bottom text</span>
+          <span className={`font-mono ${text.length >= CUSTOM_CAPTION_MAX_LENGTH ? "text-warn" : ""}`}>
+            {text.length}/{CUSTOM_CAPTION_MAX_LENGTH}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

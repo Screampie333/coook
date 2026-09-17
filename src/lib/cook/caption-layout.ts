@@ -1,17 +1,31 @@
-import "server-only";
-
-import path from "node:path";
-import { createCanvas, GlobalFonts, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
-
 /**
- * Menempel caption di atas gambar dengan gaya meme klasik:
- * huruf kapital tebal, isi putih, outline hitam, di bagian atas dan/atau bawah.
- * Teks digambar oleh kode ini, bukan oleh model AI.
+ * Tata letak caption meme klasik: huruf kapital tebal, isi putih, outline hitam,
+ * di bagian atas dan/atau bawah gambar.
+ *
+ * File ini tidak bergantung pada browser atau server: cukup diberi "context" canvas 2D.
+ * Sekarang dipakai di browser (live preview + download). Nanti fitur Serve bisa memakai
+ * kode yang sama di server, jadi hasilnya tetap persis sama.
  */
 
-// Font Anton (SIL Open Font License), lihat src/assets/fonts/OFL.txt.
-const FONT_FAMILY = "Coook Meme";
-const FONT_FILE = path.join(process.cwd(), "src", "assets", "fonts", "Anton-Regular.ttf");
+/** Nama font untuk canvas. File-nya: public/fonts/Anton-Regular.ttf (SIL Open Font License). */
+export const MEME_FONT_FAMILY = "Coook Meme";
+export const MEME_FONT_URL = "/fonts/Anton-Regular.ttf";
+
+/** Bagian canvas 2D yang dibutuhkan untuk menggambar caption. */
+export type CaptionCanvasContext = Pick<
+  CanvasRenderingContext2D,
+  | "font"
+  | "textAlign"
+  | "textBaseline"
+  | "lineJoin"
+  | "miterLimit"
+  | "lineWidth"
+  | "strokeStyle"
+  | "fillStyle"
+  | "measureText"
+  | "strokeText"
+  | "fillText"
+>;
 
 /** Caption dengan kata sebanyak ini atau kurang hanya ditaruh di bawah. */
 const SHORT_CAPTION_WORDS = 4;
@@ -24,18 +38,10 @@ const MIN_FONT_SIZE = 0.05;
 const MAX_LINES_PER_BLOCK = 2;
 const STROKE_WIDTH = 0.14; // relatif terhadap ukuran huruf
 const LINE_ADVANCE = 1.25; // relatif terhadap tinggi huruf kapital
-const JPEG_QUALITY = 90;
-
-function ensureFont() {
-  if (GlobalFonts.has(FONT_FAMILY)) return;
-  if (!GlobalFonts.registerFromPath(FONT_FILE, FONT_FAMILY)) {
-    throw new Error(`Could not load the meme font from ${FONT_FILE}`);
-  }
-}
 
 /**
  * Menyiapkan teks untuk digambar: tanda kutip/strip khusus jadi versi biasa,
- * emoji dibuang (font tidak punya emoji), lalu dijadikan huruf kapital.
+ * emoji dibuang (font tidak punya emoji), spasi dirapikan, lalu dijadikan huruf kapital.
  */
 export function prepareCaptionText(caption: string) {
   return caption
@@ -52,7 +58,7 @@ export function prepareCaptionText(caption: string) {
 }
 
 /**
- * Membagi caption jadi teks atas dan bawah.
+ * Membagi teks (yang sudah disiapkan) jadi bagian atas dan bawah secara otomatis.
  * Titik potong: tanda baca yang dekat dengan tengah, atau spasi yang paling dekat dengan tengah.
  */
 export function splitCaption(text: string): { top: string; bottom: string } {
@@ -89,8 +95,30 @@ export function splitCaption(text: string): { top: string; bottom: string } {
   return { top, bottom };
 }
 
+/**
+ * Teks atas dan bawah dari sebuah caption.
+ * - Ada baris baru (Enter): baris pertama di atas, sisanya di bawah.
+ * - Tanpa baris baru: dibagi otomatis (lihat splitCaption).
+ */
+export function captionBlocks(caption: string): { top: string; bottom: string } {
+  const newline = caption.search(/\r?\n/);
+  if (newline >= 0) {
+    return {
+      top: prepareCaptionText(caption.slice(0, newline)),
+      bottom: prepareCaptionText(caption.slice(newline + 1)),
+    };
+  }
+  return splitCaption(prepareCaptionText(caption));
+}
+
+/** true kalau caption punya teks yang bisa digambar (bukan kosong/emoji saja). */
+export function hasDrawableText(caption: string) {
+  const { top, bottom } = captionBlocks(caption);
+  return top.length > 0 || bottom.length > 0;
+}
+
 /** Membungkus teks per baris. null = ada kata yang terlalu lebar di ukuran huruf ini. */
-function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, breakLongWords: boolean) {
+function wrapText(ctx: CaptionCanvasContext, text: string, maxWidth: number, breakLongWords: boolean) {
   const lines: string[] = [];
   let line = "";
 
@@ -124,12 +152,12 @@ function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, breakLongW
   return lines;
 }
 
-function setFont(ctx: SKRSContext2D, size: number) {
-  ctx.font = `${size}px "${FONT_FAMILY}"`;
+function setFont(ctx: CaptionCanvasContext, size: number) {
+  ctx.font = `${size}px "${MEME_FONT_FAMILY}"`;
 }
 
 /** Mencari ukuran huruf terbesar yang membuat semua blok muat (maks 2 baris per blok). */
-function layoutBlocks(ctx: SKRSContext2D, blocks: string[], width: number) {
+function layoutBlocks(ctx: CaptionCanvasContext, blocks: string[], width: number) {
   const maxSize = Math.round(width * MAX_FONT_SIZE);
   const minSize = Math.round(width * MIN_FONT_SIZE);
 
@@ -153,23 +181,13 @@ function layoutBlocks(ctx: SKRSContext2D, blocks: string[], width: number) {
 }
 
 /**
- * @param image gambar asli (JPEG/PNG)
- * @param caption caption asli (boleh berisi emoji; emoji tidak ikut digambar)
- * @returns JPEG dengan caption
+ * Menggambar caption di atas canvas yang SUDAH berisi gambar.
+ * Font MEME_FONT_FAMILY harus sudah dimuat sebelum fungsi ini dipanggil.
  */
-export async function addCaptionToImage(image: Buffer, caption: string): Promise<Buffer> {
-  ensureFont();
-
-  const picture = await loadImage(image);
-  const width = picture.width;
-  const height = picture.height;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(picture, 0, 0, width, height);
-
-  const { top, bottom } = splitCaption(prepareCaptionText(caption));
+export function drawCaption(ctx: CaptionCanvasContext, width: number, height: number, caption: string) {
+  const { top, bottom } = captionBlocks(caption);
   const blocks = [top, bottom].filter(Boolean);
-  if (blocks.length === 0) return canvas.encode("jpeg", JPEG_QUALITY);
+  if (blocks.length === 0) return;
 
   const { size, lines } = layoutBlocks(ctx, blocks, width);
   setFont(ctx, size);
@@ -195,9 +213,5 @@ export async function addCaptionToImage(image: Buffer, caption: string): Promise
   const bottomLines = bottom ? lines[lines.length - 1] : [];
 
   topLines.forEach((text, index) => drawLine(text, margin + capHeight + index * advance));
-  bottomLines.forEach((text, index) =>
-    drawLine(text, height - margin - (bottomLines.length - 1 - index) * advance),
-  );
-
-  return canvas.encode("jpeg", JPEG_QUALITY);
+  bottomLines.forEach((text, index) => drawLine(text, height - margin - (bottomLines.length - 1 - index) * advance));
 }
