@@ -1,11 +1,12 @@
 import "server-only";
 
-import { IMAGE_DAILY_LIMIT, nextUtcMidnight, utcDay, type ImageQuota } from "@/lib/cook/limits";
+import { IMAGE_DAILY_LIMIT, nextQuotaReset, quotaDay, type ImageQuota } from "@/lib/cook/limits";
 import { getSupabase } from "@/lib/supabase/server";
 import { throwDatabaseError } from "./errors";
 
 /**
- * Jatah gambar harian per wallet, disimpan di tabel "usage" (hari dihitung UTC).
+ * Jatah gambar harian per wallet, disimpan di tabel "usage".
+ * Hari dihitung memakai zona reset di src/config/quota.ts (WIB), sama seperti fungsi database.
  * Pemotongan jatah memakai fungsi database supaya dua klik bersamaan tidak bisa menembus batas.
  */
 
@@ -17,7 +18,7 @@ function toQuota(used: number, now = new Date()): ImageQuota {
     used,
     limit: IMAGE_DAILY_LIMIT,
     remaining: Math.max(0, IMAGE_DAILY_LIMIT - used),
-    resetsAt: nextUtcMidnight(now).toISOString(),
+    resetsAt: nextQuotaReset(now).toISOString(),
   };
 }
 
@@ -26,7 +27,7 @@ export async function getImageQuota(walletAddress: string): Promise<ImageQuota> 
     .from("usage")
     .select("images_used")
     .eq("wallet_address", walletAddress)
-    .eq("day", utcDay())
+    .eq("day", quotaDay())
     .maybeSingle();
 
   if (error) throwDatabaseError("could not read the daily quota", error);
@@ -46,7 +47,7 @@ export async function reserveImage(
 
   // null = jatah hari ini sudah habis.
   if (typeof data !== "number") return { ok: false, quota: toQuota(IMAGE_DAILY_LIMIT) };
-  return { ok: true, reservation: { wallet: walletAddress, day: utcDay() }, quota: toQuota(data) };
+  return { ok: true, reservation: { wallet: walletAddress, day: quotaDay() }, quota: toQuota(data) };
 }
 
 /**

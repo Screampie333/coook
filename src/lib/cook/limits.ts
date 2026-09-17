@@ -1,3 +1,5 @@
+import { QUOTA } from "@/config/quota";
+
 /**
  * Aturan fitur Cook. Dipakai di browser (form) DAN di server (API route),
  * jadi file ini tidak boleh mengimpor apa pun yang khusus server.
@@ -12,24 +14,41 @@ export const CAPTION_COUNT = 3;
 /** Panjang maksimal caption yang ditulis user sendiri. */
 export const CUSTOM_CAPTION_MAX_LENGTH = 120;
 
-/** Batas gambar meme per wallet per hari (reset 00:00 UTC). */
-export const IMAGE_DAILY_LIMIT = 5;
+/** Batas gambar meme per wallet per hari. Diatur di src/config/quota.ts. */
+export const IMAGE_DAILY_LIMIT = QUOTA.dailyImages;
 
 /** Sisa jatah gambar meme sebuah wallet hari ini. */
 export type ImageQuota = {
   used: number;
   limit: number;
   remaining: number;
-  /** Waktu reset berikutnya (ISO, 00:00 UTC). */
+  /** Waktu reset jatah berikutnya (ISO). */
   resetsAt: string;
 };
 
-/** Tanggal UTC hari ini, misalnya "2026-09-18". Dipakai sebagai kunci jatah harian. */
+const RESET_OFFSET_MS = QUOTA.resetUtcOffsetHours * 60 * 60 * 1000;
+
+/**
+ * Tanggal "hari kuota" di zona reset (WIB), misalnya "2026-09-18".
+ * Dipakai sebagai kunci baris di tabel usage.
+ */
+export function quotaDay(now = new Date()) {
+  return new Date(now.getTime() + RESET_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Waktu reset jatah berikutnya, yaitu 00:00 WIB berikutnya. */
+export function nextQuotaReset(now = new Date()) {
+  const shifted = new Date(now.getTime() + RESET_OFFSET_MS);
+  const nextMidnight = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate() + 1);
+  return new Date(nextMidnight - RESET_OFFSET_MS);
+}
+
+/** Tanggal UTC hari ini. Khusus untuk kuota neuron Cloudflare, yang resetnya 00:00 UTC. */
 export function utcDay(now = new Date()) {
   return now.toISOString().slice(0, 10);
 }
 
-/** Waktu 00:00 UTC berikutnya (jam reset jatah harian). */
+/** Waktu 00:00 UTC berikutnya (reset kuota gratis Cloudflare). */
 export function nextUtcMidnight(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 }

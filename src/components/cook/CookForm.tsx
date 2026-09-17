@@ -291,7 +291,9 @@ function StatusNote({
   }
   return (
     <p className="font-mono text-xs text-dim">
-      {quota ? `${quota.remaining} of ${quota.limit} memes left today` : `${IMAGE_DAILY_LIMIT} memes per wallet per day`}
+      {quota
+        ? `${quota.remaining} of ${quota.limit} memes left · resets ${resetPhrase(quota.resetsAt)}`
+        : `${IMAGE_DAILY_LIMIT} memes per wallet per day`}
     </p>
   );
 }
