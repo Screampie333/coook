@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
 
   // Font meme dibaca dari disk saat server berjalan. Pastikan file-nya ikut ter-deploy ke Vercel.
   outputFileTracingIncludes: {
-    "/api/cook/image": ["./src/assets/fonts/**/*"],
+    "/api/cook": ["./src/assets/fonts/**/*"],
   },
 };
 

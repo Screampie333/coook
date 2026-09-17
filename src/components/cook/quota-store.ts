@@ -6,7 +6,7 @@ import { isImageQuota, type ImageQuota } from "@/lib/cook/limits";
 
 /**
  * Sisa jatah meme hari ini, dipakai bersama oleh sidebar dan form Cook.
- * Diisi dari GET /api/cook/quota dan diperbarui dari setiap respons POST /api/cook/image.
+ * Diisi dari GET /api/cook/quota dan diperbarui dari setiap respons POST /api/cook.
  */
 
 let current: ImageQuota | null = null;

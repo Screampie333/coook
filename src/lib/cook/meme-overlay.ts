@@ -42,7 +42,8 @@ export function prepareCaptionText(caption: string) {
     .normalize("NFC")
     .replace(/[‘’‚‛′]/g, "'")
     .replace(/[“”„‟″]/g, '"')
-    .replace(/[‐-―−]/g, "-")
+    .replace(/\s*[–—―]\s*/g, " - ") // en/em dash = jeda antar kata
+    .replace(/[‐‑‒−]/g, "-") // tanda hubung di dalam kata
     .replace(/…/g, "...")
     .replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}‍︎️⃣\u{1F3FB}-\u{1F3FF}]/gu, "")
     .replace(/\s+/g, " ")

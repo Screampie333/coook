@@ -18,7 +18,11 @@ type DayCounter = { day: string; used: Map<string, number> };
 export type ImageReservation = { wallet: string; day: string };
 
 // Disimpan di globalThis supaya tidak ter-reset setiap kali kode di-reload saat development.
-const globalStore = globalThis as typeof globalThis & { __coookImageQuota?: DayCounter };
+const globalStore = globalThis as typeof globalThis & {
+  __coookImageQuota?: DayCounter;
+  /** Tanggal (UTC) saat kuota gratis provider gambar habis. */
+  __coookImageProviderExhaustedDay?: string;
+};
 
 function utcDay(now: Date) {
   return now.toISOString().slice(0, 10);
@@ -66,6 +70,18 @@ export function reserveImage(
   }
   counter.used.set(wallet, used + 1);
   return { ok: true, reservation: { wallet, day: counter.day }, quota: toQuota(used + 1, now) };
+}
+
+/**
+ * Dicatat saat provider gambar bilang kuota gratis hariannya habis (Cloudflare error 3036).
+ * Sampai 00:00 UTC, Cook langsung ditolak tanpa memakai token AI teks.
+ */
+export function markImageProviderExhausted(now = new Date()) {
+  globalStore.__coookImageProviderExhaustedDay = utcDay(now);
+}
+
+export function isImageProviderExhausted(now = new Date()) {
+  return globalStore.__coookImageProviderExhaustedDay === utcDay(now);
 }
 
 /** Mengembalikan jatah yang dipotong reserveImage(). Tidak berbuat apa-apa kalau harinya sudah berganti. */

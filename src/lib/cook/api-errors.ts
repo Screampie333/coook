@@ -12,6 +12,16 @@ import { nextUtcMidnight } from "./image-quota";
 
 export const RATE_LIMIT_MESSAGE = "The kitchen is packed right now. Try again in a moment.";
 
+/** Kuota gratis harian provider gambar (Cloudflare: 10.000 neuron) habis. Reset jam 00:00 UTC. */
+export function ovenOutOfGasResponse(extra: Record<string, unknown> = {}) {
+  return errorResponse(
+    503,
+    "quota_exhausted",
+    "The oven is out of gas for today. Cooking comes back after the daily reset.",
+    { resetsAt: nextUtcMidnight().toISOString(), ...extra },
+  );
+}
+
 export function errorResponse(
   status: number,
   code: string,
@@ -44,13 +54,7 @@ export function aiErrorResponse(error: unknown, logLabel: string, extra: Record<
 
   switch (error.code) {
     case "quota_exhausted":
-      // Kuota gratis harian provider (Cloudflare: 10.000 neuron) reset jam 00:00 UTC.
-      return errorResponse(
-        503,
-        "quota_exhausted",
-        "The oven is out of gas for today. Image cooking comes back after the daily reset.",
-        { resetsAt: nextUtcMidnight().toISOString(), ...extra },
-      );
+      return ovenOutOfGasResponse(extra);
     case "timeout":
       return errorResponse(504, "ai_timeout", "The stove is taking too long. Try again.", extra);
     case "unavailable":
