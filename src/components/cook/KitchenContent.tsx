@@ -1,11 +1,13 @@
 "use client";
 
-import { Coins, CookingPot, Loader2 } from "lucide-react";
+import { Coins, CookingPot, Loader2, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authFetch } from "@/components/auth/hooks";
 import { Card, CardEmpty } from "@/components/ui/Card";
 import type { LaunchSummary, MemeSummary } from "@/lib/cook/meme-types";
 import { shortenAddress } from "@/lib/format";
+import { recordCaptionChoice } from "./caption-choice";
+import { MemeCard, type CaptionChoice } from "./MemeCard";
 import { MemeGridCard } from "./MemeGridCard";
 
 /** Isi halaman /kitchen: meme milik user yang login + koin yang pernah dia mint. */
@@ -17,6 +19,12 @@ export function KitchenContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Meme yang sedang diedit ulang (ganti caption lalu download lagi).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [choice, setChoice] = useState<CaptionChoice>({ kind: "none" });
+  const [customCaption, setCustomCaption] = useState("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +61,31 @@ export function KitchenContent() {
     setHasMore(result.memes.length === pageSize);
   }
 
+  function startEditing(meme: MemeSummary) {
+    setEditingId(meme.id);
+    // Mulai dari caption yang tersimpan terakhir.
+    setChoice(meme.captionIndex === null ? { kind: "none" } : { kind: "ai", index: meme.captionIndex });
+    setCustomCaption("");
+    setSaveState("idle");
+  }
+
+  /** Pilihan caption di Kitchen langsung disimpan, jadi galeri ikut berubah. */
+  function chooseCaption(next: CaptionChoice) {
+    setChoice(next);
+    if (!editingId) return;
+
+    // Caption tulisan sendiri tidak disimpan (belum ada moderasi), jadi dicatat sebagai "tanpa caption".
+    const captionIndex = next.kind === "ai" ? next.index : null;
+    setSaveState("saving");
+    void recordCaptionChoice(editingId, captionIndex).then((ok) => {
+      setSaveState(ok ? "saved" : "failed");
+      if (!ok) return;
+      setMemes((current) =>
+        (current ?? []).map((meme) => (meme.id === editingId ? { ...meme, captionIndex } : meme)),
+      );
+    });
+  }
+
   if (error) {
     return (
       <Card icon={CookingPot} title="Your memes">
@@ -81,20 +114,62 @@ export function KitchenContent() {
     );
   }
 
+  const editing = editingId ? (memes.find((meme) => meme.id === editingId) ?? null) : null;
+
+  // Mode edit: satu meme lama dibuka di editor caption yang sama seperti setelah Cook.
+  if (editing) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-muted">
+            Editing a meme from <time dateTime={editing.createdAt}>{formatDate(editing.createdAt)}</time>. The
+            picture stays the same, so this costs nothing.
+          </p>
+          <span className="font-mono text-xs text-dim">
+            {saveState === "saving" && "Saving…"}
+            {saveState === "saved" && "Caption saved"}
+            {saveState === "failed" && <span className="text-warn">Couldn&apos;t save the caption</span>}
+          </span>
+        </div>
+
+        <MemeCard
+          cooking={false}
+          result={{ memeId: editing.id, picture: editing.imageUrl, captions: editing.captions }}
+          choice={choice}
+          onChoose={chooseCaption}
+          customCaption={customCaption}
+          onCustomCaptionChange={setCustomCaption}
+          onClose={() => setEditingId(null)}
+          fileStem={memeFileStem(editing.createdAt)}
+          loreName={editing.loreName}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <Card
-          icon={CookingPot}
-          title="Your memes"
-          right={<span className="font-mono">{memes.length}</span>}
-        >
+        <Card icon={CookingPot} title="Your memes" right={<span className="font-mono">{memes.length}</span>}>
           {memes.length === 0 ? (
             <CardEmpty>The pot is empty. Cook your first meme on the Cook page.</CardEmpty>
           ) : (
             <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
               {memes.map((meme) => (
-                <MemeGridCard key={meme.id} meme={meme} />
+                <MemeGridCard
+                  key={meme.id}
+                  meme={meme}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => startEditing(meme)}
+                      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-line px-4 py-2 text-[13px] font-bold text-ink transition-colors hover:border-line-hover"
+                    >
+                      <Pencil className="size-3.5" />
+                      <span>Edit caption</span>
+                    </button>
+                  }
+                />
               ))}
             </div>
           )}
@@ -132,7 +207,7 @@ export function KitchenContent() {
                     {shortenAddress(launch.mintAddress)}
                   </span>
                   <time dateTime={launch.createdAt} className="ml-auto text-xs text-dim">
-                    {new Date(launch.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                    {formatDate(launch.createdAt)}
                   </time>
                 </li>
               ))}
@@ -142,6 +217,18 @@ export function KitchenContent() {
       </section>
     </div>
   );
+}
+
+function formatDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+/** Nama file download memakai tanggal meme itu dibuat. */
+function memeFileStem(iso: string) {
+  const stamp = new Date(iso).toISOString().slice(0, 19).replace("T", "-").replace(/:/g, "");
+  return `coook-meme-${stamp}`;
 }
 
 type KitchenResult =

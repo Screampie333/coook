@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket } from "lucide-react";
+import { Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
-import { authFetch } from "@/components/auth/hooks";
 import { Card } from "@/components/ui/Card";
 import { hasDrawableText } from "@/lib/cook/caption-layout";
 import { CAPTION_COUNT, CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
+import { recordCaptionChoice } from "./caption-choice";
 import { renderMeme } from "./render-meme";
 
 export type CookedResult = {
@@ -28,8 +28,11 @@ type MemeCardProps = {
   onChoose: (choice: CaptionChoice) => void;
   customCaption: string;
   onCustomCaptionChange: (text: string) => void;
-  onCookAgain: () => void;
-  cookAgainDisabled: boolean;
+  /** Kosong = tombol "Cook again" disembunyikan (dipakai saat mengedit meme lama di Kitchen). */
+  onCookAgain?: () => void;
+  cookAgainDisabled?: boolean;
+  /** Kalau diisi, muncul tombol untuk menutup editor. */
+  onClose?: () => void;
   /** Info kecil di bawah tombol, misalnya sisa jatah. */
   hint?: string;
   /** Awalan nama file download, misalnya "coook-meme-2026-09-17-143005". */
@@ -56,6 +59,7 @@ export function MemeCard({
   onCustomCaptionChange,
   onCookAgain,
   cookAgainDisabled,
+  onClose,
   hint,
   fileStem,
   loreName,
@@ -224,19 +228,27 @@ export function MemeCard({
                     <span>Download</span>
                   </button>
                   <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={onCookAgain}
-                      disabled={cookAgainDisabled}
-                      className={secondaryButton}
-                    >
-                      <RefreshCw className="size-4" />
-                      <span>Cook again</span>
-                    </button>
+                    {onCookAgain && (
+                      <button
+                        type="button"
+                        onClick={onCookAgain}
+                        disabled={cookAgainDisabled}
+                        className={secondaryButton}
+                      >
+                        <RefreshCw className="size-4" />
+                        <span>Cook again</span>
+                      </button>
+                    )}
                     <button type="button" onClick={() => setShowServeNote(true)} className={secondaryButton}>
                       <Rocket className="size-4" />
                       <span>Serve as coin</span>
                     </button>
+                    {onClose && (
+                      <button type="button" onClick={onClose} className={`${secondaryButton} col-span-2`}>
+                        <X className="size-4" />
+                        <span>Back to your kitchen</span>
+                      </button>
+                    )}
                   </div>
 
                   {hint && <p className="text-center font-mono text-xs text-dim">{hint}</p>}
@@ -263,20 +275,6 @@ export function MemeCard({
       </Card>
     </div>
   );
-}
-
-/** Menyimpan pilihan caption ke server. Gagal di sini tidak mengganggu download. */
-async function recordCaptionChoice(memeId: string, captionIndex: number | null) {
-  try {
-    const response = await authFetch(`/api/memes/${memeId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ captionIndex }),
-    });
-    if (!response.ok) console.warn("[coook] could not save the caption choice:", response.status);
-  } catch (error) {
-    console.warn("[coook] could not save the caption choice:", error);
-  }
 }
 
 const SKELETON_WIDTHS = ["w-4/5", "w-3/5", "w-2/3"];

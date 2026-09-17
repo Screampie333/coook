@@ -8,7 +8,7 @@ import { shortenAddress } from "@/lib/format";
  * Caption yang tampil adalah caption yang dipilih pembuatnya saat Download.
  * Caption tulisan sendiri tidak ditampilkan di sini karena belum ada moderasi.
  */
-export function MemeGridCard({ meme }: { meme: MemeSummary }) {
+export function MemeGridCard({ meme, action }: { meme: MemeSummary; action?: React.ReactNode }) {
   const caption = meme.captionIndex === null ? null : (meme.captions[meme.captionIndex] ?? null);
   const blocks = caption ? captionBlocks(caption) : null;
 
@@ -47,6 +47,8 @@ export function MemeGridCard({ meme }: { meme: MemeSummary }) {
       </div>
 
       {meme.idea && <p className="border-t border-line px-3 py-2 text-[13px] text-muted">{meme.idea}</p>}
+
+      {action && <div className="border-t border-line px-3 py-2">{action}</div>}
     </article>
   );
 }
