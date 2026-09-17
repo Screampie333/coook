@@ -12,11 +12,12 @@ import {
 } from "@/lib/cook/image-quota";
 import { IDEA_MAX_LENGTH, IMAGE_DAILY_LIMIT, normalizeIdea } from "@/lib/cook/limits";
 import { cookMeme } from "@/lib/cook/meme";
+import { getLore, type Lore } from "@/lib/lore";
 import { requireUser } from "@/lib/privy-server";
 
 /**
  * POST /api/cook
- * Body: { "idea": "..." }
+ * Body: { "idea": "...", "loreId": "coook" | null }
  * Hasil: {
  *   "picture": "data:image/jpeg;base64,...",   ← gambar tanpa caption
  *   "captions": ["...", "...", "..."],         ← ditempel di browser kalau user memilihnya
@@ -40,6 +41,8 @@ const bodySchema = z.object({
         .min(1, "Type an idea first.")
         .max(IDEA_MAX_LENGTH, `Keep your idea under ${IDEA_MAX_LENGTH} characters.`),
     ),
+  /** Kosong/null = meme bebas tanpa lore. Isi lore selalu diambil server dari file, bukan dari browser. */
+  loreId: z.string("Pick a lore from the list.").max(64).nullish(),
 });
 
 export async function POST(request: Request) {
@@ -62,6 +65,14 @@ export async function POST(request: Request) {
     return errorResponse(400, "invalid_input", message);
   }
 
+  let lore: Lore | null = null;
+  if (parsed.data.loreId) {
+    lore = getLore(parsed.data.loreId);
+    if (!lore) {
+      return errorResponse(400, "unknown_lore", "That lore isn't on the menu anymore. Pick another one.");
+    }
+  }
+
   // 3. Kuota gambar gratis hari ini sudah habis? Tolak langsung tanpa memakai token AI teks.
   if (isImageProviderExhausted()) {
     return ovenOutOfGasResponse({ quota: getImageQuota(wallet) });
@@ -80,7 +91,7 @@ export async function POST(request: Request) {
 
   // 5. Masak meme. Kalau langkah mana pun gagal, jatahnya dikembalikan.
   try {
-    const { picture, captions } = await cookMeme(parsed.data.idea);
+    const { picture, captions } = await cookMeme(parsed.data.idea, lore);
     return NextResponse.json(
       {
         picture: `data:${picture.mimeType};base64,${picture.data.toString("base64")}`,

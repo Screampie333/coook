@@ -1,7 +1,7 @@
 "use client";
 
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { Flame, Loader2, Sparkles, Wallet } from "lucide-react";
+import { ChevronDown, Flame, Loader2, Sparkles, Wallet } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { authFetch } from "@/components/auth/hooks";
 import { usePrivyEnabled } from "@/components/auth/PrivyProviders";
@@ -14,6 +14,7 @@ import {
   normalizeIdea,
   type ImageQuota,
 } from "@/lib/cook/limits";
+import type { LoreOption } from "@/lib/lore/types";
 import { MemeCard, type CaptionChoice, type CookedResult } from "./MemeCard";
 import { setImageQuota, useImageQuota } from "./quota-store";
 
@@ -23,21 +24,26 @@ type AuthState =
   | { status: "signed_out"; login: () => void }
   | { status: "signed_in" };
 
-/** Alur Cook di halaman "/": ide → gambar → 3 caption, semua dalam satu klik. */
-export function CookForm() {
+type CookFormProps = {
+  /** Daftar lore untuk dropdown (dikirim server dari src/config/lores.json). */
+  lores: LoreOption[];
+};
+
+/** Alur Cook di halaman "/": pilih lore + ide → gambar → 3 caption, semua dalam satu klik. */
+export function CookForm({ lores }: CookFormProps) {
   const enabled = usePrivyEnabled();
-  if (!enabled) return <CookPanel auth={{ status: "unavailable" }} />;
-  return <PrivyCookForm />;
+  if (!enabled) return <CookPanel auth={{ status: "unavailable" }} lores={lores} />;
+  return <PrivyCookForm lores={lores} />;
 }
 
-function PrivyCookForm() {
+function PrivyCookForm({ lores }: CookFormProps) {
   const { ready, authenticated } = usePrivy();
   // Tanpa callback: pesan error login sudah ditampilkan oleh tombol Connect di sidebar/top bar.
   const { login } = useLogin();
 
-  if (!ready) return <CookPanel auth={{ status: "loading" }} />;
-  if (!authenticated) return <CookPanel auth={{ status: "signed_out", login: () => login() }} />;
-  return <CookPanel auth={{ status: "signed_in" }} />;
+  if (!ready) return <CookPanel auth={{ status: "loading" }} lores={lores} />;
+  if (!authenticated) return <CookPanel auth={{ status: "signed_out", login: () => login() }} lores={lores} />;
+  return <CookPanel auth={{ status: "signed_in" }} lores={lores} />;
 }
 
 // Batas lama tombol dikunci setelah kena rate limit.
@@ -51,8 +57,10 @@ const NETWORK_MESSAGE = "Couldn't reach the kitchen. Check your connection and t
 const primaryButton =
   "inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-accent px-6 py-2.5 text-sm font-bold text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
 
-function CookPanel({ auth }: { auth: AuthState }) {
+function CookPanel({ auth, lores }: { auth: AuthState } & CookFormProps) {
   const [idea, setIdea] = useState("");
+  // "" = tanpa lore (meme bebas)
+  const [loreId, setLoreId] = useState("");
   const [cooking, setCooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +68,7 @@ function CookPanel({ auth }: { auth: AuthState }) {
   const [cooked, setCooked] = useState<CookedResult | null>(null);
   const [choice, setChoice] = useState<CaptionChoice>({ kind: "none" });
   const [customCaption, setCustomCaption] = useState("");
-  const [cookedIdea, setCookedIdea] = useState<string | null>(null);
+  const [cookedWith, setCookedWith] = useState<{ idea: string; loreId: string } | null>(null);
   const [fileStem, setFileStem] = useState("coook-meme");
 
   // Kunci sementara
@@ -69,6 +77,9 @@ function CookPanel({ auth }: { auth: AuthState }) {
 
   const quota = useImageQuota();
   const inputId = useId();
+  const loreSelectId = useId();
+  const selectedLore = lores.find((lore) => lore.id === loreId) ?? null;
+  const cookedLore = lores.find((lore) => lore.id === cookedWith?.loreId) ?? null;
 
   // Hitung mundur detik setelah rate limit.
   useEffect(() => {
@@ -90,21 +101,21 @@ function CookPanel({ auth }: { auth: AuthState }) {
   const ovenClosed = ovenClosedUntil !== null;
   const ready = signedIn && !cooking && cooldown === 0 && !outOfMemes && !ovenClosed;
   const canCook = ready && normalizeIdea(idea).length > 0;
-  const canCookAgain = ready && cookedIdea !== null;
+  const canCookAgain = ready && cookedWith !== null;
 
-  async function cook(ideaToCook: string) {
+  async function cook(ideaToCook: string, loreToUse: string) {
     const cleanIdea = normalizeIdea(ideaToCook);
     if (!ready || !cleanIdea) return;
 
     setCooking(true);
     setError(null);
     try {
-      const result = await requestMeme(cleanIdea);
+      const result = await requestMeme(cleanIdea, loreToUse);
       if (result.quota) setImageQuota(result.quota);
       if (result.ok) {
         setCooked(result.cooked);
         setChoice({ kind: "none" });
-        setCookedIdea(cleanIdea);
+        setCookedWith({ idea: cleanIdea, loreId: loreToUse });
         setFileStem(memeFileStem());
       } else {
         setError(result.message);
@@ -141,10 +152,36 @@ function CookPanel({ auth }: { auth: AuthState }) {
           className="flex flex-col gap-3 p-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void cook(idea);
+            void cook(idea, loreId);
           }}
         >
-          <label htmlFor={inputId} className="text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
+          <label htmlFor={loreSelectId} className="text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
+            Lore
+          </label>
+          <div className="relative">
+            <select
+              id={loreSelectId}
+              value={loreId}
+              onChange={(event) => setLoreId(event.target.value)}
+              disabled={cooking}
+              className="w-full cursor-pointer appearance-none rounded-[10px] border border-line bg-panel-2 py-2.5 pr-10 pl-3.5 text-sm text-ink [color-scheme:dark] focus:border-accent focus:ring-2 focus:ring-accent-soft focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="">No lore (free meme)</option>
+              {lores.map((lore) => (
+                <option key={lore.id} value={lore.id}>
+                  {lore.name} (${lore.ticker})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-dim" />
+          </div>
+          <p className="-mt-1 text-xs text-dim">
+            {selectedLore
+              ? `Starring ${selectedLore.mascotName}. The picture and captions follow the ${selectedLore.name} lore.`
+              : "Anything goes: no mascot, no brand rules."}
+          </p>
+
+          <label htmlFor={inputId} className="mt-1 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
             Your idea
           </label>
           <textarea
@@ -154,7 +191,7 @@ function CookPanel({ auth }: { auth: AuthState }) {
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
-                void cook(idea);
+                void cook(idea, loreId);
               }
             }}
             maxLength={IDEA_MAX_LENGTH}
@@ -216,9 +253,10 @@ function CookPanel({ auth }: { auth: AuthState }) {
           customCaption={customCaption}
           onCustomCaptionChange={setCustomCaption}
           onCookAgain={() => {
-            if (cookedIdea) void cook(cookedIdea);
+            if (cookedWith) void cook(cookedWith.idea, cookedWith.loreId);
           }}
           cookAgainDisabled={!canCookAgain}
+          loreName={cookedLore?.name ?? null}
           hint={quota ? `Cook again uses 1 meme · ${quota.remaining} left today` : undefined}
           fileStem={fileStem}
         />
@@ -296,13 +334,13 @@ function parseCooked(picture: unknown, captions: unknown): CookedResult | null {
 }
 
 /** Memanggil POST /api/cook. Tidak pernah melempar error; semua kegagalan jadi pesan yang jelas. */
-async function requestMeme(idea: string): Promise<CookResult> {
+async function requestMeme(idea: string, loreId: string): Promise<CookResult> {
   let response: Response;
   try {
     response = await authFetch("/api/cook", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea }),
+      body: JSON.stringify({ idea, loreId: loreId || null }),
     });
   } catch {
     return { ok: false, quota: null, message: NETWORK_MESSAGE };

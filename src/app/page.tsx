@@ -1,4 +1,5 @@
 import { CookForm } from "@/components/cook/CookForm";
+import { listLoreOptions } from "@/lib/lore";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
@@ -19,7 +20,7 @@ export default function CookPage() {
           title="Kitchen counter"
           sub="Drop an idea, get three degen captions. Copy the one that slaps."
         />
-        <CookForm />
+        <CookForm lores={listLoreOptions()} />
       </Block>
     </>
   );
