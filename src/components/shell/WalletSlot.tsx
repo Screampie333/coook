@@ -1,29 +1,45 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
 import { ConnectButton } from "@/components/auth/ConnectButton";
 import { usePrivyEnabled } from "@/components/auth/PrivyProviders";
+import { refreshImageQuota, setImageQuota, useImageQuota } from "@/components/cook/quota-store";
 
-/** Grup Wallet di sidebar: tombol Connect + status kuota (kuota masih placeholder). */
+/** Grup Wallet di sidebar: tombol Connect + sisa jatah meme hari ini. */
 export function WalletSlot() {
   const enabled = usePrivyEnabled();
 
   return (
     <div className="flex flex-col gap-3">
       <ConnectButton />
-      {enabled ? <QuotaStatus /> : <StatusDot state="idle" text="Quota: —" />}
+      {enabled ? <QuotaStatus /> : <StatusDot state="idle" text="Memes left: —" />}
     </div>
   );
 }
 
 function QuotaStatus() {
-  const { ready, authenticated } = usePrivy();
-  // Angka kuota asli akan diambil dari server di step berikutnya.
-  if (ready && authenticated) return <StatusDot state="success" text="Quota: —" />;
-  return <StatusDot state="idle" text="Quota: —" />;
+  const { ready, authenticated, user } = usePrivy();
+  const quota = useImageQuota();
+  const userId = user?.id;
+
+  // Muat kuota saat login (atau ganti akun), kosongkan saat logout.
+  useEffect(() => {
+    if (!ready) return;
+    if (authenticated) void refreshImageQuota();
+    else setImageQuota(null);
+  }, [ready, authenticated, userId]);
+
+  if (!ready || !authenticated || !quota) return <StatusDot state="idle" text="Memes left: —" />;
+  return (
+    <StatusDot
+      state={quota.remaining > 0 ? "success" : "warn"}
+      text={`Memes left: ${quota.remaining}/${quota.limit}`}
+    />
+  );
 }
 
-type StatusState = "idle" | "live" | "success";
+type StatusState = "idle" | "live" | "success" | "warn";
 
 /** Indikator status bertitik, seperti "Feed status" di referensi. */
 export function StatusDot({ state, text }: { state: StatusState; text: string }) {
@@ -31,6 +47,7 @@ export function StatusDot({ state, text }: { state: StatusState; text: string })
     idle: "bg-dim",
     live: "bg-accent shadow-[0_0_0_3px_var(--color-accent-soft)]",
     success: "bg-success shadow-[0_0_0_3px_rgb(61_220_132/0.15)]",
+    warn: "bg-warn shadow-[0_0_0_3px_rgb(255_92_114/0.15)]",
   }[state];
 
   return (

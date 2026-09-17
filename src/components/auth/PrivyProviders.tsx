@@ -15,6 +15,8 @@ const privyConfig: PrivyClientConfig = {
     accentColor: "#FF6B1A",
     walletChainType: "solana-only",
     walletList: ["phantom", "solflare", "backpack"],
+    // Hanya ada login wallet, jadi Privy mewajibkan ini true (kalau tidak, muncul peringatan di console).
+    showWalletLoginFirst: true,
     landingHeader: "Connect to Coook",
   },
   externalWallets: {

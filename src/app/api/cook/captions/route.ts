@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AiError } from "@/lib/ai";
+import { aiErrorResponse, errorResponse } from "@/lib/cook/api-errors";
+import { createCaptionToken, isCaptionTokenConfigured } from "@/lib/cook/caption-token";
 import { cookCaptions, IdeaRejectedError } from "@/lib/cook/captions";
 import { IDEA_MAX_LENGTH, normalizeIdea } from "@/lib/cook/limits";
 import { requireUser } from "@/lib/privy-server";
@@ -8,14 +9,14 @@ import { requireUser } from "@/lib/privy-server";
 /**
  * POST /api/cook/captions
  * Body: { "idea": "..." }
- * Hasil: { "captions": ["...", "...", "..."] }
+ * Hasil: { "captions": ["...", "...", "..."], "captionToken": "..." }
  * Error: { "error": "pesan untuk user", "code": "...", "retryAfterSeconds"?: number }
+ *
+ * captionToken dipakai untuk membuat gambar (POST /api/cook/image), lihat src/lib/cook/caption-token.ts.
  */
 
 // Batas waktu fungsi di Vercel: 2 percobaan x timeout 20 detik masih muat.
 export const maxDuration = 60;
-
-const RATE_LIMIT_MESSAGE = "The kitchen is packed right now. Try again in a moment.";
 
 const bodySchema = z.object({
   idea: z
@@ -48,51 +49,25 @@ export async function POST(request: Request) {
     return errorResponse(400, "invalid_input", message);
   }
 
-  // 3. Masak caption.
+  // 3. Pastikan server siap SEBELUM memakai kuota AI.
+  if (!isCaptionTokenConfigured()) {
+    console.error("[api/cook/captions] COOK_SIGNING_SECRET is missing or shorter than 32 characters.");
+    return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
+  }
+
+  // 4. Masak caption.
   try {
     const captions = await cookCaptions(parsed.data.idea);
-    return NextResponse.json({ captions }, { headers: { "Cache-Control": "no-store" } });
+    const captionToken = createCaptionToken({
+      wallet: auth.user.walletAddress,
+      idea: parsed.data.idea,
+      captions,
+    });
+    return NextResponse.json({ captions, captionToken }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return cookErrorResponse(error);
-  }
-}
-
-function cookErrorResponse(error: unknown) {
-  if (error instanceof IdeaRejectedError) {
-    return errorResponse(422, "idea_rejected", "Can't cook that idea. Try a different one.");
-  }
-
-  if (error instanceof AiError) {
-    if (error.code === "rate_limited") {
-      const retryAfter = error.retryAfterSeconds;
-      return NextResponse.json(
-        { error: RATE_LIMIT_MESSAGE, code: "rate_limited", retryAfterSeconds: retryAfter ?? null },
-        {
-          status: 429,
-          headers: retryAfter ? { "Retry-After": String(retryAfter) } : undefined,
-        },
-      );
+    if (error instanceof IdeaRejectedError) {
+      return errorResponse(422, "idea_rejected", "Can't cook that idea. Try a different one.");
     }
-
-    // Detail teknis hanya dicatat di log server, tidak dikirim ke browser.
-    console.error(`[api/cook/captions] ${error.code}: ${error.message}`);
-
-    switch (error.code) {
-      case "timeout":
-        return errorResponse(504, "ai_timeout", "The stove is taking too long. Try again.");
-      case "unavailable":
-        return errorResponse(503, "ai_unavailable", "The kitchen is closed for a moment. Try again soon.");
-      case "config":
-        return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
-      default:
-        return errorResponse(502, "ai_failed", "The kitchen burned that one. Try again.");
-    }
+    return aiErrorResponse(error, "api/cook/captions");
   }
-
-  console.error("[api/cook/captions] unexpected error", error);
-  return errorResponse(500, "server_error", "Something went wrong. Try again.");
-}
-
-function errorResponse(status: number, code: string, message: string) {
-  return NextResponse.json({ error: message, code }, { status });
 }

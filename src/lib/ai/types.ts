@@ -43,9 +43,31 @@ export interface TextProvider {
   generateText(input: GenerateTextInput): Promise<GenerateTextResult>;
 }
 
+export type GenerateImageInput = {
+  /** Deskripsi gambar. Jangan pernah meminta model menulis teks. */
+  prompt: string;
+  /** Jumlah langkah pembuatan gambar. Kosong = pengaturan default provider. */
+  steps?: number;
+};
+
+export type GenerateImageResult = {
+  /** Isi file gambar. */
+  data: Buffer;
+  mimeType: "image/jpeg" | "image/png";
+  provider: string;
+  model: string;
+};
+
+export interface ImageProvider {
+  name: string;
+  generateImage(input: GenerateImageInput): Promise<GenerateImageResult>;
+}
+
 export type AiErrorCode =
   /** Provider menolak karena terlalu banyak request/token (HTTP 429). */
   | "rate_limited"
+  /** Kuota gratis harian provider sudah habis (misalnya 10.000 neuron Cloudflare). */
+  | "quota_exhausted"
   /** Provider tidak menjawab dalam batas waktu. */
   | "timeout"
   /** Provider sedang down atau tidak bisa dihubungi. */

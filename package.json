@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "^3.43.0",
     "@solana-program/memo": "^0.10.0",
