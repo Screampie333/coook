@@ -7,7 +7,7 @@
  */
 export const QUOTA = {
   /** Jatah gambar per wallet per hari. */
-  dailyImages: 5,
+  dailyImages: 3,
 
   /** Jam reset sebagai selisih dari UTC. WIB = +7, jadi jatah reset tiap 00:00 WIB. */
   resetUtcOffsetHours: 7,
