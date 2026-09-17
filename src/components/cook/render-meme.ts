@@ -31,6 +31,9 @@ function loadMemeFont() {
 function loadPicture(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
+    // Gambar diambil dari Supabase Storage (domain lain). Tanpa ini, canvas "ternoda"
+    // dan hasilnya tidak bisa diubah jadi file.
+    image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("Could not load the picture."));
     image.src = src;

@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
-import { getImageQuota } from "@/lib/cook/image-quota";
+import { aiErrorResponse, errorResponse } from "@/lib/cook/api-errors";
+import { getImageQuota } from "@/lib/db/usage";
+import { ensureUser } from "@/lib/db/users";
 import { requireUser } from "@/lib/privy-server";
+import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 /**
  * GET /api/cook/quota
  * Sisa jatah gambar meme wallet yang login hari ini.
- * Hasil: { "used": 1, "limit": 5, "remaining": 4, "resetsAt": "2026-09-18T00:00:00.000Z" }
+ * Sekaligus mendaftarkan user (baris di tabel users) saat pertama kali login.
  */
 export async function GET(request: Request) {
   const auth = await requireUser(request);
   if (!auth.ok) return auth.response;
 
-  return NextResponse.json(getImageQuota(auth.user.walletAddress), {
-    headers: { "Cache-Control": "no-store" },
-  });
+  if (!isDatabaseConfigured()) {
+    console.error("[api/cook/quota] SUPABASE_URL or SUPABASE_SECRET_KEY is missing.");
+    return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
+  }
+
+  try {
+    await ensureUser(auth.user.walletAddress, auth.user.userId);
+    const quota = await getImageQuota(auth.user.walletAddress);
+    return NextResponse.json(quota, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return aiErrorResponse(error, "api/cook/quota");
+  }
 }

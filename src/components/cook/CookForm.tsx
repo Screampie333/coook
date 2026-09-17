@@ -25,7 +25,7 @@ type AuthState =
   | { status: "signed_in" };
 
 type CookFormProps = {
-  /** Daftar lore untuk dropdown (dikirim server dari src/config/lores.json). */
+  /** Daftar lore untuk dropdown (dikirim server dari tabel "lores"). */
   lores: LoreOption[];
 };
 
@@ -320,9 +320,13 @@ type CookResult =
       ovenClosedUntil?: string;
     };
 
-/** Mengecek bentuk hasil Cook dari API: gambar polos + 3 caption. */
-function parseCooked(picture: unknown, captions: unknown): CookedResult | null {
-  if (typeof picture !== "string" || !picture.startsWith("data:image/")) return null;
+/** Mengecek bentuk hasil Cook dari API: id meme + URL gambar + 3 caption. */
+function parseCooked(value: unknown): CookedResult | null {
+  const meme = value as { id?: unknown; imageUrl?: unknown; captions?: unknown } | null;
+  if (typeof meme?.id !== "string" || typeof meme.imageUrl !== "string") return null;
+  if (!meme.imageUrl.startsWith("http")) return null;
+
+  const captions = meme.captions;
   if (
     !Array.isArray(captions) ||
     captions.length !== CAPTION_COUNT ||
@@ -330,7 +334,7 @@ function parseCooked(picture: unknown, captions: unknown): CookedResult | null {
   ) {
     return null;
   }
-  return { picture, captions };
+  return { memeId: meme.id, picture: meme.imageUrl, captions };
 }
 
 /** Memanggil POST /api/cook. Tidak pernah melempar error; semua kegagalan jadi pesan yang jelas. */
@@ -347,8 +351,7 @@ async function requestMeme(idea: string, loreId: string): Promise<CookResult> {
   }
 
   const body = (await response.json().catch(() => null)) as {
-    picture?: unknown;
-    captions?: unknown;
+    meme?: unknown;
     error?: unknown;
     code?: unknown;
     retryAfterSeconds?: unknown;
@@ -358,7 +361,7 @@ async function requestMeme(idea: string, loreId: string): Promise<CookResult> {
   const quota = isImageQuota(body?.quota) ? body.quota : null;
 
   if (response.ok) {
-    const cooked = parseCooked(body?.picture, body?.captions);
+    const cooked = parseCooked(body?.meme);
     if (cooked) return { ok: true, cooked, quota };
   }
 

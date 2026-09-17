@@ -3,13 +3,16 @@
 import { Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
+import { authFetch } from "@/components/auth/hooks";
 import { Card } from "@/components/ui/Card";
 import { hasDrawableText } from "@/lib/cook/caption-layout";
 import { CAPTION_COUNT, CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
 import { renderMeme } from "./render-meme";
 
 export type CookedResult = {
-  /** data URL gambar tanpa caption. */
+  /** id baris meme di database. */
+  memeId: string;
+  /** URL gambar tanpa caption di Supabase Storage. */
   picture: string;
   /** 3 caption dari AI. */
   captions: string[];
@@ -100,6 +103,13 @@ export function MemeCard({
   async function download() {
     if (!canDownload || !shownImage) return;
     setDownloadFailed(false);
+
+    // Catat caption yang dipakai, supaya meme ini tampil dengan caption itu di galeri.
+    // Caption tulisan sendiri tidak disimpan (belum ada moderasi), jadi dicatat sebagai "tanpa caption".
+    if (result) {
+      void recordCaptionChoice(result.memeId, choice.kind === "ai" && withCaption ? choice.index : null);
+    }
+
     try {
       const blob = await (await fetch(shownImage)).blob();
       const url = URL.createObjectURL(blob);
@@ -253,6 +263,20 @@ export function MemeCard({
       </Card>
     </div>
   );
+}
+
+/** Menyimpan pilihan caption ke server. Gagal di sini tidak mengganggu download. */
+async function recordCaptionChoice(memeId: string, captionIndex: number | null) {
+  try {
+    const response = await authFetch(`/api/memes/${memeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captionIndex }),
+    });
+    if (!response.ok) console.warn("[coook] could not save the caption choice:", response.status);
+  } catch (error) {
+    console.warn("[coook] could not save the caption choice:", error);
+  }
 }
 
 const SKELETON_WIDTHS = ["w-4/5", "w-3/5", "w-2/3"];

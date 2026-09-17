@@ -1,9 +1,15 @@
+import { connection } from "next/server";
 import { CookForm } from "@/components/cook/CookForm";
-import { listLoreOptions } from "@/lib/lore";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { listLoreOptions } from "@/lib/lore";
 
-export default function CookPage() {
+export default async function CookPage() {
+  // Daftar lore dibaca dari database setiap kali halaman dibuka, bukan saat build,
+  // supaya lore baru langsung muncul tanpa deploy ulang.
+  await connection();
+  const lores = await listLoreOptions();
+
   return (
     <>
       <Hero
@@ -18,9 +24,9 @@ export default function CookPage() {
       <Block>
         <SectionTitle
           title="Kitchen counter"
-          sub="Drop an idea, get three degen captions. Copy the one that slaps."
+          sub="Drop an idea, get one picture and three degen captions. Copy the one that slaps."
         />
-        <CookForm lores={listLoreOptions()} />
+        <CookForm lores={lores} />
       </Block>
     </>
   );

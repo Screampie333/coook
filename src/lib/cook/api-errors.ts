@@ -2,7 +2,8 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
-import { nextUtcMidnight } from "./image-quota";
+import { DatabaseError } from "@/lib/db/errors";
+import { nextUtcMidnight } from "./limits";
 
 /**
  * Format error semua API Cook:
@@ -32,8 +33,13 @@ export function errorResponse(
   return NextResponse.json({ error: message, code, ...extra }, { status, headers });
 }
 
-/** Mengubah error dari AI (atau error tak terduga) jadi respons HTTP. */
+/** Mengubah error dari AI, database, atau error tak terduga jadi respons HTTP. */
 export function aiErrorResponse(error: unknown, logLabel: string, extra: Record<string, unknown> = {}) {
+  if (error instanceof DatabaseError) {
+    console.error(`[${logLabel}] database: ${error.message}`);
+    return errorResponse(503, "database_error", "The kitchen's notebook is unavailable. Try again.", extra);
+  }
+
   if (!(error instanceof AiError)) {
     console.error(`[${logLabel}] unexpected error`, error);
     return errorResponse(500, "server_error", "Something went wrong. Try again.", extra);

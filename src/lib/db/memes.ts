@@ -1,0 +1,119 @@
+import "server-only";
+
+import type { MemeSummary } from "@/lib/cook/meme-types";
+import { getSupabase } from "@/lib/supabase/server";
+import { throwDatabaseError } from "./errors";
+import { memeImageUrl } from "./storage";
+
+/** Jumlah meme per halaman galeri. */
+export const MEMES_PAGE_SIZE = 24;
+
+const SELECT_COLUMNS = "id, wallet_address, idea, lore_id, image_path, captions, caption_index, created_at, lores(name)";
+
+type MemeRow = {
+  id: string;
+  wallet_address: string;
+  idea: string;
+  lore_id: string | null;
+  image_path: string;
+  captions: string[] | null;
+  caption_index: number | null;
+  created_at: string;
+  lores: { name: string } | { name: string }[] | null;
+};
+
+function toSummary(row: MemeRow, options: { withIdea: boolean }): MemeSummary {
+  const lore = Array.isArray(row.lores) ? row.lores[0] : row.lores;
+  return {
+    id: row.id,
+    imageUrl: memeImageUrl(row.image_path),
+    captions: row.captions ?? [],
+    captionIndex: row.caption_index,
+    // Ide user hanya ditampilkan ke pemiliknya sendiri.
+    idea: options.withIdea ? row.idea : null,
+    loreId: row.lore_id,
+    loreName: lore?.name ?? null,
+    walletAddress: row.wallet_address,
+    createdAt: row.created_at,
+  };
+}
+
+export async function insertMeme(meme: {
+  id: string;
+  walletAddress: string;
+  idea: string;
+  loreId: string | null;
+  imagePath: string;
+  captions: string[];
+}) {
+  const { error } = await getSupabase().from("memes").insert({
+    id: meme.id,
+    wallet_address: meme.walletAddress,
+    idea: meme.idea,
+    lore_id: meme.loreId,
+    image_path: meme.imagePath,
+    captions: meme.captions,
+  });
+
+  if (error) throwDatabaseError("could not save the meme", error);
+}
+
+/** Galeri publik (/menu). `loreId`: "all" | "none" | id lore. */
+export async function listRecentMemes(options: {
+  loreId?: string;
+  before?: string;
+  limit?: number;
+}): Promise<MemeSummary[]> {
+  const limit = options.limit ?? MEMES_PAGE_SIZE;
+  let query = getSupabase()
+    .from("memes")
+    .select(SELECT_COLUMNS)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (options.loreId === "none") query = query.is("lore_id", null);
+  else if (options.loreId && options.loreId !== "all") query = query.eq("lore_id", options.loreId);
+  if (options.before) query = query.lt("created_at", options.before);
+
+  const { data, error } = await query;
+  if (error) throwDatabaseError("could not read the meme gallery", error);
+  return (data ?? []).map((row) => toSummary(row as unknown as MemeRow, { withIdea: false }));
+}
+
+/** Meme milik satu wallet (/kitchen). */
+export async function listWalletMemes(
+  walletAddress: string,
+  options: { before?: string; limit?: number } = {},
+): Promise<MemeSummary[]> {
+  const limit = options.limit ?? MEMES_PAGE_SIZE;
+  let query = getSupabase()
+    .from("memes")
+    .select(SELECT_COLUMNS)
+    .eq("wallet_address", walletAddress)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (options.before) query = query.lt("created_at", options.before);
+
+  const { data, error } = await query;
+  if (error) throwDatabaseError("could not read your memes", error);
+  return (data ?? []).map((row) => toSummary(row as unknown as MemeRow, { withIdea: true }));
+}
+
+/**
+ * Mencatat caption yang dipilih pembuatnya (dipanggil saat Download).
+ * Filter wallet_address memastikan user hanya bisa mengubah meme miliknya sendiri.
+ * @returns false kalau meme tidak ada atau bukan milik wallet itu.
+ */
+export async function setCaptionIndex(memeId: string, walletAddress: string, captionIndex: number | null) {
+  const { data, error } = await getSupabase()
+    .from("memes")
+    .update({ caption_index: captionIndex })
+    .eq("id", memeId)
+    .eq("wallet_address", walletAddress)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throwDatabaseError("could not save the caption choice", error);
+  return data !== null;
+}

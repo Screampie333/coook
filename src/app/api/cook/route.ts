@@ -1,34 +1,33 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AiError } from "@/lib/ai";
 import { aiErrorResponse, errorResponse, ovenOutOfGasResponse } from "@/lib/cook/api-errors";
 import { IdeaRejectedError } from "@/lib/cook/errors";
-import {
-  getImageQuota,
-  isImageProviderExhausted,
-  markImageProviderExhausted,
-  refundImage,
-  reserveImage,
-} from "@/lib/cook/image-quota";
 import { IDEA_MAX_LENGTH, IMAGE_DAILY_LIMIT, normalizeIdea } from "@/lib/cook/limits";
 import { cookMeme } from "@/lib/cook/meme";
+import { isImageProviderExhausted, markImageProviderExhausted } from "@/lib/cook/oven-status";
+import { insertMeme } from "@/lib/db/memes";
+import { deleteMemeImage, memeImagePath, memeImageUrl, uploadMemeImage } from "@/lib/db/storage";
+import { getImageQuota, refundImage, reserveImage } from "@/lib/db/usage";
+import { ensureUser } from "@/lib/db/users";
 import { getLore, type Lore } from "@/lib/lore";
 import { requireUser } from "@/lib/privy-server";
+import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 /**
  * POST /api/cook
  * Body: { "idea": "...", "loreId": "coook" | null }
  * Hasil: {
- *   "picture": "data:image/jpeg;base64,...",   ← gambar tanpa caption
- *   "captions": ["...", "...", "..."],         ← ditempel di browser kalau user memilihnya
+ *   "meme": { "id": "...", "imageUrl": "https://...", "captions": ["...", "...", "..."] },
  *   "quota": {...}
  * }
  * Error: { "error": "pesan untuk user", "code": "...", "quota"?: {...}, "resetsAt"?: "...", "retryAfterSeconds"?: number }
  *
- * Urutan: adegan (Groq) → gambar (Cloudflare) → 3 caption (Groq).
+ * Urutan: adegan (Groq) → gambar (Cloudflare) → 3 caption (Groq) → simpan ke Storage + tabel memes.
  */
 
-// Adegan + gambar (timeout 30 detik) + caption.
+// Adegan + gambar (timeout 30 detik) + caption + upload.
 export const maxDuration = 60;
 
 const bodySchema = z.object({
@@ -41,7 +40,7 @@ const bodySchema = z.object({
         .min(1, "Type an idea first.")
         .max(IDEA_MAX_LENGTH, `Keep your idea under ${IDEA_MAX_LENGTH} characters.`),
     ),
-  /** Kosong/null = meme bebas tanpa lore. Isi lore selalu diambil server dari file, bukan dari browser. */
+  /** Kosong/null = meme bebas tanpa lore. Isi lore selalu diambil server dari database. */
   loreId: z.string("Pick a lore from the list.").max(64).nullish(),
 });
 
@@ -65,21 +64,39 @@ export async function POST(request: Request) {
     return errorResponse(400, "invalid_input", message);
   }
 
+  if (!isDatabaseConfigured()) {
+    console.error("[api/cook] SUPABASE_URL or SUPABASE_SECRET_KEY is missing.");
+    return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
+  }
+
+  // 3. Siapkan user + lore.
   let lore: Lore | null = null;
-  if (parsed.data.loreId) {
-    lore = getLore(parsed.data.loreId);
-    if (!lore) {
-      return errorResponse(400, "unknown_lore", "That lore isn't on the menu anymore. Pick another one.");
+  try {
+    await ensureUser(wallet, auth.user.userId);
+
+    if (parsed.data.loreId) {
+      lore = await getLore(parsed.data.loreId);
+      if (!lore) {
+        return errorResponse(400, "unknown_lore", "That lore isn't on the menu anymore. Pick another one.");
+      }
     }
+
+    // 4. Kuota gambar gratis hari ini sudah habis? Tolak langsung tanpa memakai token AI teks.
+    if (isImageProviderExhausted()) {
+      return ovenOutOfGasResponse({ quota: await getImageQuota(wallet) });
+    }
+  } catch (error) {
+    return aiErrorResponse(error, "api/cook");
   }
 
-  // 3. Kuota gambar gratis hari ini sudah habis? Tolak langsung tanpa memakai token AI teks.
-  if (isImageProviderExhausted()) {
-    return ovenOutOfGasResponse({ quota: getImageQuota(wallet) });
+  // 5. Potong jatah harian wallet (atomik di database).
+  let reserved;
+  try {
+    reserved = await reserveImage(wallet);
+  } catch (error) {
+    return aiErrorResponse(error, "api/cook");
   }
 
-  // 4. Potong jatah harian wallet (sementara disimpan di memori server).
-  const reserved = reserveImage(wallet);
   if (!reserved.ok) {
     return errorResponse(
       429,
@@ -89,19 +106,37 @@ export async function POST(request: Request) {
     );
   }
 
-  // 5. Masak meme. Kalau langkah mana pun gagal, jatahnya dikembalikan.
+  // 6. Masak meme, lalu simpan gambar + barisnya. Kalau ada yang gagal, jatahnya dikembalikan.
+  const memeId = randomUUID();
+  let uploadedPath: string | null = null;
+
   try {
     const { picture, captions } = await cookMeme(parsed.data.idea, lore);
+
+    const path = memeImagePath(wallet, memeId, picture.mimeType);
+    await uploadMemeImage(path, picture.data, picture.mimeType);
+    uploadedPath = path;
+
+    await insertMeme({
+      id: memeId,
+      walletAddress: wallet,
+      idea: parsed.data.idea,
+      loreId: lore?.id ?? null,
+      imagePath: path,
+      captions,
+    });
+
     return NextResponse.json(
       {
-        picture: `data:${picture.mimeType};base64,${picture.data.toString("base64")}`,
-        captions,
+        meme: { id: memeId, imageUrl: memeImageUrl(path), captions, loreId: lore?.id ?? null },
         quota: reserved.quota,
       },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    const quota = refundImage(reserved.reservation);
+    // Gambar yang sudah ter-upload tapi barisnya gagal disimpan tidak ditinggalkan di Storage.
+    if (uploadedPath) await deleteMemeImage(uploadedPath);
+    const quota = (await refundImage(reserved.reservation)) ?? undefined;
 
     if (error instanceof IdeaRejectedError) {
       return errorResponse(422, "idea_rejected", "Can't cook that idea. Try a different one.", { quota });

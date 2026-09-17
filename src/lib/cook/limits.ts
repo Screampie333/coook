@@ -24,6 +24,16 @@ export type ImageQuota = {
   resetsAt: string;
 };
 
+/** Tanggal UTC hari ini, misalnya "2026-09-18". Dipakai sebagai kunci jatah harian. */
+export function utcDay(now = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+/** Waktu 00:00 UTC berikutnya (jam reset jatah harian). */
+export function nextUtcMidnight(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+}
+
 /** Merapikan ide: karakter kontrol dan spasi/baris baru berlebih jadi satu spasi. */
 export function normalizeIdea(idea: string) {
   return idea.replace(/[\p{Cc}\s]+/gu, " ").trim();

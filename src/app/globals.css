@@ -45,6 +45,33 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Font meme (Anton, SIL Open Font License) untuk caption di canvas dan di galeri. */
+@font-face {
+  font-family: "Coook Meme";
+  src: url("/fonts/Anton-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+/**
+ * Caption meme di kartu galeri. Outline hitam dibuat dengan text-shadow supaya
+ * hasilnya sama di semua browser (paint-order belum didukung di mana-mana).
+ */
+@utility meme-caption {
+  font-family: "Coook Meme", var(--font-sans);
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.05;
+  text-shadow:
+    0.045em 0 #000,
+    -0.045em 0 #000,
+    0 0.045em #000,
+    0 -0.045em #000,
+    0.035em 0.035em #000,
+    -0.035em 0.035em #000,
+    0.035em -0.035em #000,
+    -0.035em -0.035em #000;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

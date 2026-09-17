@@ -1,8 +1,6 @@
-import { CookingPot } from "lucide-react";
 import type { Metadata } from "next";
 import { RequireLogin } from "@/components/auth/RequireLogin";
-import { SessionCheck } from "@/components/auth/SessionCheck";
-import { Card, CardEmpty } from "@/components/ui/Card";
+import { KitchenContent } from "@/components/cook/KitchenContent";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
@@ -19,16 +17,13 @@ export default function KitchenPage() {
             Your <Highlight>kitchen</Highlight>.
           </>
         }
-        lede="Every meme you've cooked, in one place. Connect a wallet to see yours."
+        lede="Every meme you've cooked, and every coin you've served."
       />
 
       <Block>
-        <SectionTitle title="Your memes" sub="Saved memes will show up here." />
+        <SectionTitle title="Your memes" sub="Only you can see the ideas behind them." />
         <RequireLogin>
-          <Card icon={CookingPot} title="Your memes" right={<span className="font-mono">0</span>}>
-            <CardEmpty>The pot is empty.</CardEmpty>
-          </Card>
-          <SessionCheck />
+          <KitchenContent />
         </RequireLogin>
       </Block>
     </>
