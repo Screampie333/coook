@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Coook design tokens
+   Diturunkan dari design-reference/styles.css (Alphet):
+   background gelap tetap, aksen lime diganti oranye Coook.
+   Setiap token di sini otomatis jadi class Tailwind,
+   contoh: --color-panel -> bg-panel, text-panel, border-panel.
+   ============================================================ */
+
+@theme {
+  /* Brand Coook */
+  --color-accent: #ff6b1a;
+  --color-accent-soft: rgb(255 107 26 / 0.13);
+  --color-accent-glow: rgb(255 107 26 / 0.3);
+  --color-cream: #f6efe4;
+  --color-success: #3ddc84;
+  --color-warn: #ff5c72;
+
+  /* Permukaan gelap (sama dengan referensi) */
+  --color-bg: #0b0809;
+  --color-sidebar: #100c12;
+  --color-panel: #14111a;
+  --color-panel-2: #1b1722;
+  --color-line: #2a2533;
+  --color-line-hover: #3a3446;
+
+  /* Teks */
+  --color-ink: #f4ece1;
+  --color-muted: #9a92a4;
+  --color-dim: #6c657a;
+
+  /* Ukuran layout */
+  --radius-card: 14px;
+  --spacing-sidebar: 264px;
+
+  /* Sidebar pindah jadi drawer di bawah lebar ini (sama dengan referensi) */
+  --breakpoint-shell: 860px;
+}
+
+/* Font dari next/font (variabel diset di layout.tsx) */
+@theme inline {
+  --font-sans: var(--font-space-grotesk), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-bungee), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Cahaya oranye tipis di belakang semua konten */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(60vw 50vh at 12% -8%, rgb(255 107 26 / 0.1), transparent 65%),
+      radial-gradient(55vw 45vh at 95% 4%, rgb(246 239 228 / 0.05), transparent 62%);
+  }
+
+  h1,
+  h2,
+  h3 {
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}

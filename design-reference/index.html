@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alphet — memecoin quality gauge</title>
+<meta name="description" content="Alphet reads every memecoin launched on Robinhood Chain, scores it on four on-chain quality metrics, and shows which side the money is actually going to.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- The tab icon. SVG rather than .ico: it stays sharp at every size a
+     browser asks for, and this project has no dependencies to rasterise a
+     PNG with. Chrome, Edge, Firefox and Safari 16+ all take it; anything
+     older falls back to the blank page icon it already had. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cdefs%3E%3Cpath id=%22h%22 d=%22M50 89 C 19 68%2C 5 49%2C 5 33 C 5 18%2C 16 9%2C 29 9 C 38 9%2C 45 14%2C 50 21 C 55 14%2C 62 9%2C 71 9 C 84 9%2C 95 18%2C 95 33 C 95 49%2C 81 68%2C 50 89 Z%22/%3E%3CclipPath id=%22c%22%3E%3Cuse href=%22%23h%22/%3E%3C/clipPath%3E%3C/defs%3E%3Cuse href=%22%23h%22 fill=%22%23ccff00%22/%3E%3Cg clip-path=%22url(%23c)%22%3E%3Cpath d=%22M49 4 C 44 24%2C 61 38%2C 58 52 C 55 67%2C 44 74%2C 51 94 L 102 94 L 102 4 Z%22 fill=%22%23ffffff%22/%3E%3Cpath d=%22M58 52 C 55 67%2C 44 74%2C 51 94 L 102 94 L 102 56 Z%22 fill=%22%23b6b2c0%22 opacity=%220.5%22/%3E%3Cg stroke=%22%2312121a%22 stroke-width=%223.4%22 fill=%22none%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M14 23 Q 29 15%2C 44 22%22/%3E%3Cpath d=%22M10 34 Q 27 26%2C 45 33%22/%3E%3Cpath d=%22M10 46 Q 27 54%2C 44 47%22/%3E%3C/g%3E%3Ccircle cx=%2228%22 cy=%2238%22 r=%225.2%22 fill=%22%23ffffff%22/%3E%3Ccircle cx=%2229%22 cy=%2238.4%22 r=%222.3%22 fill=%22%2312121a%22/%3E%3Cg stroke=%22%2312121a%22 stroke-width=%222.6%22 fill=%22none%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M66 24 C 71 16%2C 80 18%2C 78 25 C 76 31%2C 68 30%2C 70 23%22/%3E%3Cpath d=%22M82 21 C 89 18%2C 93 25%2C 88 29 C 84 32%2C 80 28%2C 83 25%22/%3E%3Cpath d=%22M62 32 C 72 27%2C 85 32%2C 88 40 C 90 48%2C 84 54%2C 77 51%22/%3E%3Cpath d=%22M64 45 C 61 53%2C 67 60%2C 75 57%22/%3E%3Cpath d=%22M73 47 C 74 58%2C 66 63%2C 63 71 C 60 79%2C 66 84%2C 71 80%22/%3E%3C/g%3E%3Cpath d=%22M72 33 L78 38 L75 46 L68 46 L65 38 Z%22 fill=%22%23d6d2de%22 stroke=%22%2312121a%22 stroke-width=%222.6%22 stroke-linejoin=%22round%22/%3E%3Cpath d=%22M49 4 C 44 24%2C 61 38%2C 58 52 C 55 67%2C 44 74%2C 51 94%22 fill=%22none%22 stroke=%22%230b0809%22 stroke-width=%224.5%22/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#0b0809">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============================================================
+     MOBILE TOP BAR
+     ============================================================ -->
+<div class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><use href="#alphet-mark"></use></svg>
+    <span class="brand-name">Alphet</span>
+  </div>
+  <button class="icon-btn" id="menuOpen" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+  </button>
+</div>
+<div class="backdrop" id="backdrop"></div>
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" viewBox="0 0 100 100" role="img" aria-label="Alphet"><use href="#alphet-mark"></use></svg>
+      <span class="brand-name">Alphet</span>
+    </a>
+    <button class="icon-btn" id="menuClose" aria-label="Close menu" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-body">
+    <div class="nav-group">
+      <h2 class="nav-label">Navigate</h2>
+      <nav id="nav">
+        <a class="nav-item active" href="#gauge" data-target="gauge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M13.4 10.6 19 5"/><path d="M20.7 17A9 9 0 1 0 3.3 17"/></svg>
+          <span>The gauge</span>
+        </a>
+        <a class="nav-item" href="#metrics" data-target="metrics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+          <span>Four metrics</span>
+        </a>
+        <a class="nav-item" href="#tokens" data-target="tokens">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          <span>What moved it</span>
+        </a>
+        <a class="nav-item" href="#split" data-target="split">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h4"/><path d="M15 8h4"/><path d="M5 16h4"/><path d="M15 16h4"/></svg>
+          <span>Alpha vs Beta</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Resources</h2>
+      <nav>
+        <a class="nav-item" href="https://x.com/alphetxyz" target="_blank" rel="noopener noreferrer">
+          <svg class="x-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <span>@alphetxyz</span>
+          <svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        </a>
+      </nav>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Contract</h2>
+      <button type="button" class="ca-btn" id="caBtn" title="Click to copy contract address" aria-label="Copy contract address">
+        <span class="ca-text">
+          <span class="ca-label">Address</span>
+          <span class="ca-value" id="caValue">Coming soon</span>
+        </span>
+        <svg class="ca-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      </button>
+    </div>
+
+    <div class="nav-group">
+      <h2 class="nav-label">Feed status</h2>
+      <div class="status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Demo data</span>
+      </div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<main class="main" id="top">
+
+  <!-- ============================================================
+       THE GAUGE
+       ============================================================ -->
+  <section class="hero" id="gauge">
+    <div class="page">
+      <h1>Every memecoin on <span class="hl">Robinhood Chain</span>,<br>sorted into good and bad.</h1>
+      <p class="lede">Up to four on-chain checks per token, as many as the chain will answer. The seam shows where the money went.</p>
+
+      <!-- the split gauge -->
+      <div class="gauge-wrap">
+        <div class="gauge-readout">
+          <div class="side-read side-alpha">
+            <span class="side-name">Alpha</span>
+            <span class="side-pct" id="alphaPct">—</span>
+            <span class="side-note" id="alphaNote">quality side</span>
+          </div>
+          <div class="side-read side-beta">
+            <span class="side-name">Beta</span>
+            <span class="side-pct" id="betaPct">—</span>
+            <span class="side-note" id="betaNote">junk side</span>
+          </div>
+        </div>
+
+        <div class="gauge" id="gaugeBar" role="img" aria-label="Alpha versus Beta split" aria-live="polite">
+          <div class="gauge-alpha" id="gaugeAlpha"></div>
+          <div class="gauge-beta"></div>
+
+          <!-- verdict band edges, so you can see which band the seam is in -->
+          <div class="gauge-ticks" id="gaugeTicks"></div>
+
+          <div class="gauge-seam" id="gaugeSeam">
+            <div class="seam-line"></div>
+            <div class="seam-badge">
+              <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#alphet-mark"></use></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- What the two words mean, once, right where they're first used —
+             so the page can be understood without scrolling to the section
+             that explains it. -->
+        <div class="gauge-legend">
+          <span><b class="k-alpha">Alpha</b> supply spread, liquidity locked</span>
+          <span><b class="k-beta">Beta</b> someone else holds the exit</span>
+        </div>
+
+        <div class="gauge-foot">
+          <div class="verdict">
+            <span class="verdict-label" id="verdictLabel">Loading…</span>
+            <span class="verdict-index" id="verdictIndex"></span>
+          </div>
+          <p class="verdict-summary" id="verdictSummary">Reading the chain…</p>
+        </div>
+      </div>
+
+      <!-- Sample readings: preview each state without waiting for one.
+           Hidden for now. SHOW_PREVIEW in app.js is the only switch;
+           this starts hidden too so the buttons never flash on screen
+           before the script has decided. -->
+      <div class="samples" id="samplesBlock" hidden>
+        <span class="samples-label">Preview a reading</span>
+        <div class="samples-row" id="samplesRow"></div>
+      </div>
+
+      <!-- Recent readings, as a strip of split bars.
+           Hidden for now. SHOW_TREND in app.js is the only switch; this starts
+           hidden too so the card never flashes on screen before the script
+           has decided. -->
+      <div class="card" id="trendBlock" hidden>
+        <div class="card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>Recent readings</span>
+          <span class="right" id="trendMeta"></span>
+        </div>
+        <div class="trend" id="trend"></div>
+        <p class="trend-note" id="trendNote" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOUR METRICS
+       ============================================================ -->
+  <section class="block" id="metrics">
+    <div class="page">
+      <h2 class="section-title">Four things Alphet reads</h2>
+      <p class="section-sub">Each token scored 0–100 on all four, then weighted into one number. Above 55 it's Alpha.</p>
+
+      <div class="metric-grid" id="metricGrid"></div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="tf-head">
+          <span class="tf-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Metrics by timeframe</span>
+          </span>
+          <div class="tf-row" id="tfRow"></div>
+        </div>
+        <div id="tfBody"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       WHAT MOVED IT
+       ============================================================ -->
+  <section class="block" id="tokens">
+    <div class="page">
+      <h2 class="section-title">What moved the seam</h2>
+      <p class="section-sub">Biggest volume first. A gauge you can't audit is just a logo — so here's the working.</p>
+
+      <div class="card">
+        <div class="card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          <span>Scored tokens</span>
+          <span class="right" id="tokensMeta"></span>
+        </div>
+        <div class="token-table" id="tokenTable"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       ALPHA VS BETA
+       ============================================================ -->
+  <section class="block" id="split">
+    <div class="page">
+      <h2 class="section-title">Alpha vs Beta</h2>
+      <p class="section-sub">Not a price call — a quality call.</p>
+
+      <div class="vs">
+        <div class="vs-card vs-alpha">
+          <div class="vs-head">
+            <span class="vs-tag">Alpha</span>
+            <span class="vs-score" id="vsAlphaCut">score ≥ 55</span>
+          </div>
+          <h3>Supply is spread, liquidity can't be pulled</h3>
+          <ul>
+            <li><strong>No wallet can end it.</strong> Top 10 hold a small share.</li>
+            <li><strong>The pool is stuck.</strong> Liquidity burned or locked.</li>
+            <li><strong>The dev has shipped before.</strong> Past launches still alive.</li>
+            <li><strong>You can get out.</strong> A sell simulates clean.</li>
+          </ul>
+          <p class="vs-note">Not a promise the price goes up — just the absence of what takes it to zero on purpose.</p>
+        </div>
+
+        <div class="vs-card vs-beta">
+          <div class="vs-head">
+            <span class="vs-tag">Beta</span>
+            <span class="vs-score" id="vsBetaCut">score &lt; 55</span>
+          </div>
+          <h3>Someone else is holding the exit</h3>
+          <ul>
+            <li><strong>The float is concentrated.</strong> A few wallets can end it.</li>
+            <li><strong>The liquidity is withdrawable.</strong> One dev decision from empty.</li>
+            <li><strong>The dev has left tokens dead.</strong> Records work both ways.</li>
+            <li><strong>The exit is narrow.</strong> Mostly sells, or no sell at all.</li>
+          </ul>
+          <p class="vs-note">Beta tokens do go up. That's why the money keeps arriving — and why the seam usually sits here.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M13.4 10.6 19 5"/><path d="M20.7 17A9 9 0 1 0 3.3 17"/></svg>
+          <span>Reading the seam</span>
+        </div>
+        <div class="scale" id="scale"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- cta -->
+  <section class="block">
+    <div class="page">
+      <div class="cta">
+        <h2>Know which side you're buying</h2>
+        <p>A new reading every few hours.</p>
+        <a class="btn-dark" href="https://x.com/alphetxyz" target="_blank" rel="noopener noreferrer">
+          <svg class="x-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <span>Follow on X</span>
+        </a>
+      </div>
+
+      <div class="foot">
+        <p id="footNote">This page is a design demo. The numbers shown are illustrative until a live snapshot is available at /api/latest.</p>
+        <p>Alphet — quality gauge on <span class="chain-tag">Robinhood Chain</span></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================================================
+     SHARED SVG: the Alphet mark — a heart split down a wavy seam, the
+     chain's lime on the Alpha side and white on the Beta side. The logo is
+     the product: it is the same split the gauge draws, at badge size.
+
+     Both halves are light now, so every line that has to read against them
+     - the seam, the brows, the scrollwork - is drawn in near-black.
+
+     There used to be a stripped-back second variant for the sidebar, on the
+     theory that detail reading at 42px would be mush at 30px. One mark is
+     worth more than that saving: a brand seen at two sizes should be the
+     same brand. The sidebar mark is a little larger than it was to buy the
+     linework back.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="alphet-heart"
+          d="M50 89 C 19 68, 5 49, 5 33 C 5 18, 16 9, 29 9 C 38 9, 45 14, 50 21
+             C 55 14, 62 9, 71 9 C 84 9, 95 18, 95 33 C 95 49, 81 68, 50 89 Z"/>
+
+    <clipPath id="alphet-heart-clip">
+      <use href="#alphet-heart"/>
+    </clipPath>
+
+    <!-- Everything to the right of the seam. Drawn as a closed shape running
+         off-canvas and then clipped to the heart, so the wavy edge is defined
+         once and the two halves can never drift apart. -->
+    <path id="alphet-beta-half"
+          d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 4 Z"/>
+
+    <path id="alphet-seam"
+          d="M49 4 C 44 24, 61 38, 58 52 C 55 67, 44 74, 51 94"/>
+  </defs>
+
+  <g id="alphet-mark">
+    <use href="#alphet-heart" fill="#ccff00"/>
+    <g clip-path="url(#alphet-heart-clip)">
+      <use href="#alphet-beta-half" fill="#ffffff"/>
+      <!-- the shaded lower lobe on the Beta side -->
+      <path d="M58 52 C 55 67, 44 74, 51 94 L 102 94 L 102 56 Z" fill="#b6b2c0" opacity="0.5"/>
+
+      <!-- Alpha side: three brow strokes over a plain open eye -->
+      <g stroke="#12121a" stroke-width="2.3" fill="none" stroke-linecap="round">
+        <path d="M14 23 Q 29 15, 44 22"/>
+        <path d="M10 34 Q 27 26, 45 33"/>
+        <path d="M10 46 Q 27 54, 44 47"/>
+      </g>
+      <circle cx="28" cy="38" r="4.4" fill="#ffffff"/>
+      <circle cx="29" cy="38.4" r="1.9" fill="#12121a"/>
+
+      <!-- Beta side: scrollwork over a cut-gem eye -->
+      <g stroke="#12121a" stroke-width="1.7" fill="none" stroke-linecap="round">
+        <path d="M66 24 C 71 16, 80 18, 78 25 C 76 31, 68 30, 70 23"/>
+        <path d="M82 21 C 89 18, 93 25, 88 29 C 84 32, 80 28, 83 25"/>
+        <path d="M62 32 C 72 27, 85 32, 88 40 C 90 48, 84 54, 77 51"/>
+        <path d="M64 45 C 61 53, 67 60, 75 57"/>
+        <path d="M73 47 C 74 58, 66 63, 63 71 C 60 79, 66 84, 71 80"/>
+      </g>
+      <path d="M72 33 L78 38 L75 46 L68 46 L65 38 Z"
+            fill="#d6d2de" stroke="#12121a" stroke-width="1.7" stroke-linejoin="round"/>
+
+      <use href="#alphet-seam" fill="none" stroke="#0b0809" stroke-width="2.6"/>
+    </g>
+  </g>
+</svg>
+
+<script src="shell.js"></script>
+<script src="live.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
