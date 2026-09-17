@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, ImageIcon, Loader2, PenLine, RefreshCw, Rocket } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
@@ -31,7 +31,7 @@ type MemeCardProps = {
   /** Kosong = tombol "Cook again" disembunyikan (dipakai saat mengedit meme lama di Kitchen). */
   onCookAgain?: () => void;
   cookAgainDisabled?: boolean;
-  /** Kalau diisi, muncul tombol untuk menutup editor. */
+  /** Kalau diisi, muncul tombol panah "Back" di pojok kiri atas gambar. */
   onClose?: () => void;
   /** Info kecil di bawah tombol, misalnya sisa jatah. */
   hint?: string;
@@ -164,6 +164,17 @@ export function MemeCard({
                     unoptimized
                     className="size-full object-cover"
                   />
+                  {onClose && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Back to your kitchen"
+                      className="absolute top-2 left-2 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-bg/80 px-3 py-1.5 text-xs font-bold text-ink backdrop-blur-sm transition-colors hover:border-line-hover hover:bg-bg"
+                    >
+                      <ArrowLeft className="size-3.5" />
+                      <span>Back</span>
+                    </button>
+                  )}
                   {updating && (
                     <span className="absolute top-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-bg/80 px-2.5 py-1 text-[11px] text-muted">
                       <Loader2 className="size-3 animate-spin" />
@@ -239,16 +250,14 @@ export function MemeCard({
                         <span>Cook again</span>
                       </button>
                     )}
-                    <button type="button" onClick={() => setShowServeNote(true)} className={secondaryButton}>
+                    <button
+                      type="button"
+                      onClick={() => setShowServeNote(true)}
+                      className={`${secondaryButton} ${onCookAgain ? "" : "col-span-2"}`}
+                    >
                       <Rocket className="size-4" />
                       <span>Serve as coin</span>
                     </button>
-                    {onClose && (
-                      <button type="button" onClick={onClose} className={`${secondaryButton} col-span-2`}>
-                        <X className="size-4" />
-                        <span>Back to your kitchen</span>
-                      </button>
-                    )}
                   </div>
 
                   {hint && <p className="text-center font-mono text-xs text-dim">{hint}</p>}
