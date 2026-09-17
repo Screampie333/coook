@@ -1,5 +1,4 @@
-import { Sparkles } from "lucide-react";
-import { Card, CardEmpty } from "@/components/ui/Card";
+import { CookForm } from "@/components/cook/CookForm";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
@@ -16,10 +15,11 @@ export default function CookPage() {
       />
 
       <Block>
-        <SectionTitle title="Kitchen counter" sub="Your ingredients go here. The stove turns on soon." />
-        <Card icon={Sparkles} title="New meme" right="Coming soon">
-          <CardEmpty>Nothing on the stove yet.</CardEmpty>
-        </Card>
+        <SectionTitle
+          title="Kitchen counter"
+          sub="Drop an idea, get three degen captions. Copy the one that slaps."
+        />
+        <CookForm />
       </Block>
     </>
   );
