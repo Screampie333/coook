@@ -100,6 +100,39 @@ export async function listWalletMemes(
   return (data ?? []).map((row) => toSummary(row as unknown as MemeRow, { withIdea: true }));
 }
 
+export type MemeForLaunch = {
+  id: string;
+  imagePath: string;
+  captions: string[];
+  idea: string;
+  loreId: string | null;
+};
+
+/**
+ * Meme milik satu user, untuk dijadikan koin.
+ * Filter wallet_address memastikan user tidak bisa menjadikan meme orang lain sebagai koinnya.
+ */
+export async function getMemeForOwner(memeId: string, walletAddress: string): Promise<MemeForLaunch | null> {
+  const { data, error } = await getSupabase()
+    .from("memes")
+    .select("id, image_path, captions, idea, lore_id")
+    .eq("id", memeId)
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  if (error) throwDatabaseError("could not read that meme", error);
+  if (!data) return null;
+
+  const row = data as unknown as Pick<MemeRow, "id" | "image_path" | "captions" | "idea" | "lore_id">;
+  return {
+    id: row.id,
+    imagePath: row.image_path,
+    captions: row.captions ?? [],
+    idea: row.idea,
+    loreId: row.lore_id,
+  };
+}
+
 /**
  * Mencatat caption yang dipilih pembuatnya (dipanggil saat Download).
  * Filter wallet_address memastikan user hanya bisa mengubah meme miliknya sendiri.

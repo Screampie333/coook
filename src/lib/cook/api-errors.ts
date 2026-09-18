@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { AiError } from "@/lib/ai";
 import { DatabaseError } from "@/lib/db/errors";
+import { LaunchError } from "@/lib/launch/types";
 import { nextUtcMidnight } from "./limits";
 
 /**
@@ -31,6 +32,53 @@ export function errorResponse(
   headers?: HeadersInit,
 ) {
   return NextResponse.json({ error: message, code, ...extra }, { status, headers });
+}
+
+/**
+ * Mengubah error fitur Serve jadi respons HTTP.
+ * Error selain LaunchError diteruskan ke aiErrorResponse.
+ *
+ * Beberapa pesan LaunchError memang ditulis untuk dibaca user (saldo kurang, isi ditolak,
+ * transaksi mencurigakan), jadi pesannya diteruskan apa adanya.
+ */
+export function launchErrorResponse(error: unknown, logLabel: string, extra: Record<string, unknown> = {}) {
+  if (!(error instanceof LaunchError)) {
+    return aiErrorResponse(error, logLabel, extra);
+  }
+
+  if (error.code === "rate_limited") {
+    const retryAfter = error.retryAfterSeconds;
+    return errorResponse(
+      429,
+      "rate_limited",
+      RATE_LIMIT_MESSAGE,
+      { retryAfterSeconds: retryAfter ?? null, ...extra },
+      retryAfter ? { "Retry-After": String(retryAfter) } : undefined,
+    );
+  }
+
+  console.error(`[${logLabel}] ${error.code}: ${error.message}`);
+
+  switch (error.code) {
+    // Pesan-pesan ini aman dan berguna untuk ditampilkan ke user.
+    case "insufficient_funds":
+      return errorResponse(402, "insufficient_funds", error.message, extra);
+    case "rejected_content":
+      return errorResponse(422, "rejected_content", error.message, extra);
+    case "unsafe_transaction":
+      return errorResponse(502, "unsafe_transaction", error.message, extra);
+    case "rejected":
+      return errorResponse(422, "transaction_rejected", error.message, extra);
+
+    case "timeout":
+      return errorResponse(504, "serve_timeout", "Solana is taking too long. Try again.", extra);
+    case "unavailable":
+      return errorResponse(503, "serve_unavailable", "Can't reach Solana right now. Try again soon.", extra);
+    case "config":
+      return errorResponse(500, "server_error", "Serving coins isn't set up yet. Try again later.", extra);
+    default:
+      return errorResponse(502, "serve_failed", "Couldn't serve that meme as a coin. Try again.", extra);
+  }
 }
 
 /** Mengubah error dari AI, database, atau error tak terduga jadi respons HTTP. */

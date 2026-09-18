@@ -28,6 +28,18 @@ export function memeImageUrl(path: string) {
   return getSupabase().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
+/**
+ * Mengambil isi file gambar dari Storage.
+ * Dipakai fitur Serve: server menggambar caption sendiri dari gambar aslinya,
+ * bukan menerima gambar jadi dari browser.
+ */
+export async function downloadMemeImage(path: string): Promise<Buffer> {
+  const { data, error } = await getSupabase().storage.from(BUCKET).download(path);
+  if (error) throwDatabaseError("could not read the picture", error);
+  if (!data) throwDatabaseError("could not read the picture", new Error(`empty file at ${path}`));
+  return Buffer.from(await data.arrayBuffer());
+}
+
 /** Membersihkan file kalau baris meme gagal disimpan. Tidak pernah melempar error. */
 export async function deleteMemeImage(path: string) {
   try {

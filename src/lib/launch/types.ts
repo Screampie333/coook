@@ -66,6 +66,8 @@ export type LaunchErrorCode =
   | "rejected"
   /** Saldo SOL user tidak cukup untuk membayar biaya pembuatan koin. */
   | "insufficient_funds"
+  /** Teks koin tidak lolos filter isi, jadi tidak boleh diterbitkan. */
+  | "rejected_content"
   /** Error lain dari provider. */
   | "provider_error";
 

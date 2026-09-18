@@ -26,4 +26,6 @@ export type LaunchSummary = {
   ticker: string;
   memeId: string;
   createdAt: string;
+  /** "devnet" = token latihan yang tidak bernilai, bukan koin pump.fun sungguhan. */
+  cluster: "mainnet" | "devnet";
 };

@@ -4,6 +4,7 @@ import {
   decompileTransactionMessageFetchingLookupTables,
   getCompiledTransactionMessageDecoder,
   getTransactionDecoder,
+  isFullySignedTransaction,
   type CompiledTransactionMessage,
   type CompiledTransactionMessageWithLifetime,
   type Transaction,
@@ -143,6 +144,25 @@ export async function inspectCreateTransaction(
       version: message.version,
     },
   };
+}
+
+/**
+ * Memeriksa transaksi yang DIKEMBALIKAN browser setelah user tanda tangan.
+ *
+ * Browser bisa saja mengirim transaksi lain untuk kita siarkan, jadi isinya diperiksa
+ * dengan aturan yang sama seperti saat dibuat, ditambah: tanda tangannya harus lengkap.
+ */
+export async function inspectSignedTransaction(
+  wireTransaction: Uint8Array,
+  expected: { creator: string; mint: string },
+  rules: VerifyRules,
+): Promise<InspectedTransaction> {
+  const inspected = await inspectCreateTransaction(wireTransaction, expected, rules);
+
+  if (!isFullySignedTransaction(inspected.transaction)) {
+    throw new LaunchError("bad_output", "The transaction is missing a signature. Try signing it again.");
+  }
+  return inspected;
 }
 
 function hasLifetime(
