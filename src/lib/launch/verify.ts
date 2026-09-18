@@ -8,8 +8,9 @@ import {
   type CompiledTransactionMessageWithLifetime,
   type Transaction,
 } from "@solana/kit";
+import { programName } from "./programs";
 import { getRpc } from "./rpc";
-import { LaunchError } from "./types";
+import { LaunchError, type LaunchProvider } from "./types";
 
 /**
  * Memeriksa isi transaksi yang dibuat pihak ketiga SEBELUM dikirim ke wallet user.
@@ -34,19 +35,6 @@ import { LaunchError } from "./types";
  * keluar dari wallet user dibatasi lewat simulasi (lihat assertSafeToSign di rpc.ts).
  */
 
-/**
- * Program on-chain yang wajar muncul di transaksi pembuatan koin pump.fun.
- * Alamat program pump.fun sudah saya cek langsung ke jaringan Solana (mainnet dan devnet).
- */
-const ALLOWED_PROGRAMS = new Map<string, string>([
-  ["6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P", "pump.fun"],
-  ["11111111111111111111111111111111", "System"],
-  ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "SPL Token"],
-  ["ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", "Associated Token Account"],
-  ["metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s", "Metaplex Token Metadata"],
-  ["ComputeBudget111111111111111111111111111111", "Compute Budget"],
-]);
-
 export type CreateTransactionReport = {
   /** Wallet yang membayar semua biaya. Harus wallet user. */
   feePayer: string;
@@ -66,10 +54,14 @@ export type InspectedTransaction = {
   report: CreateTransactionReport;
 };
 
+/** Bagian provider yang dibutuhkan pemeriksa: jaringan dan daftar program yang diizinkan. */
+export type VerifyRules = Pick<LaunchProvider, "cluster" | "allowedPrograms" | "requiredProgram">;
+
 /** Membaca transaksi mentah dan menolaknya kalau isinya tidak sesuai harapan. */
 export async function inspectCreateTransaction(
   wireTransaction: Uint8Array,
   expected: { creator: string; mint: string },
+  rules: VerifyRules,
 ): Promise<InspectedTransaction> {
   let transaction: Transaction;
   try {
@@ -119,20 +111,25 @@ export async function inspectCreateTransaction(
   // 5. Terjemahkan dulu alamat yang tersimpan di lookup table, lalu periksa programnya.
   let decompiled;
   try {
-    decompiled = await decompileTransactionMessageFetchingLookupTables(message, getRpc());
+    decompiled = await decompileTransactionMessageFetchingLookupTables(message, getRpc(rules.cluster));
   } catch (error) {
     if (error instanceof LaunchError) throw error;
     throw new LaunchError("unavailable", "Could not read the accounts used by the transaction.", { cause: error });
   }
 
   const programs: string[] = [];
+  let hasRequired = false;
   for (const instruction of decompiled.instructions) {
-    const name = ALLOWED_PROGRAMS.get(instruction.programAddress);
-    if (!name) throw unsafe(`it calls an unexpected program: ${instruction.programAddress}`);
+    const address = instruction.programAddress as string;
+    if (!rules.allowedPrograms.includes(address)) {
+      throw unsafe(`it calls an unexpected program: ${address}`);
+    }
+    if (address === rules.requiredProgram) hasRequired = true;
+    const name = programName(address);
     if (!programs.includes(name)) programs.push(name);
   }
-  if (!programs.includes("pump.fun")) {
-    throw unsafe("it never calls the pump.fun program");
+  if (!hasRequired) {
+    throw unsafe(`it never calls the ${programName(rules.requiredProgram)} program`);
   }
 
   return {

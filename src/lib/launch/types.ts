@@ -26,8 +26,22 @@ export type BuildCreateTransactionResult = {
   provider: string;
 };
 
+/** Jaringan Solana yang dipakai. Devnet hanya untuk latihan, koinnya tidak bernilai. */
+export type Cluster = "mainnet" | "devnet";
+
 export interface LaunchProvider {
   name: string;
+  /** Jaringan tempat provider ini bekerja. */
+  cluster: Cluster;
+  /** true kalau koin yang dibuat provider ini benar-benar ada di pump.fun. */
+  isReal: boolean;
+  /**
+   * Alamat program yang boleh muncul di transaksi buatan provider ini.
+   * Apa pun di luar daftar ini membuat transaksi ditolak sebelum sampai ke wallet user.
+   */
+  allowedPrograms: readonly string[];
+  /** Program yang WAJIB dipanggil, sebagai bukti transaksinya memang membuat koin. */
+  requiredProgram: string;
   buildCreateTransaction(input: BuildCreateTransactionInput): Promise<BuildCreateTransactionResult>;
 }
 
@@ -50,6 +64,8 @@ export type LaunchErrorCode =
   | "unsafe_transaction"
   /** Transaksi ditolak jaringan Solana (misalnya blockhash sudah kedaluwarsa). */
   | "rejected"
+  /** Saldo SOL user tidak cukup untuk membayar biaya pembuatan koin. */
+  | "insufficient_funds"
   /** Error lain dari provider. */
   | "provider_error";
 

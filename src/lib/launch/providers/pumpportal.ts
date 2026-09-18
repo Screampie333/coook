@@ -1,5 +1,6 @@
 import "server-only";
 
+import { PROGRAMS } from "../programs";
 import {
   LaunchError,
   type BuildCreateTransactionInput,
@@ -121,5 +122,17 @@ async function readErrorMessage(response: Response) {
 
 export const pumpPortalProvider: LaunchProvider = {
   name: "pumpportal",
+  // PumpPortal tidak menyediakan devnet sama sekali (dinyatakan di FAQ resmi mereka).
+  cluster: "mainnet",
+  isReal: true,
+  allowedPrograms: [
+    PROGRAMS.pumpFun,
+    PROGRAMS.system,
+    PROGRAMS.token,
+    PROGRAMS.associatedToken,
+    PROGRAMS.metaplexMetadata,
+    PROGRAMS.computeBudget,
+  ],
+  requiredProgram: PROGRAMS.pumpFun,
   buildCreateTransaction,
 };

@@ -7,7 +7,7 @@ import {
   type Signature,
 } from "@solana/kit";
 import { LAUNCH } from "@/config/launch";
-import { LaunchError } from "./types";
+import { LaunchError, type Cluster } from "./types";
 
 /**
  * Sambungan ke jaringan Solana. Hanya dipakai di server (alamat RPC bisa berisi API key).
@@ -23,20 +23,32 @@ const LAMPORTS_PER_SOL = 1_000_000_000;
 const CONFIRM_TIMEOUT_MS = 60_000;
 const CONFIRM_POLL_MS = 1_500;
 
-/** Dipakai juga oleh verify.ts untuk membaca address lookup table. */
-export function getRpc() {
+/** Devnet punya RPC publik gratis, jadi tidak wajib diisi sendiri. */
+const DEFAULT_DEVNET_RPC_URL = "https://api.devnet.solana.com";
+
+function getRpcUrl(cluster: Cluster) {
+  if (cluster === "devnet") {
+    return process.env.SOLANA_DEVNET_RPC_URL?.trim() || DEFAULT_DEVNET_RPC_URL;
+  }
   const url = process.env.SOLANA_RPC_URL?.trim();
   if (!url) {
     throw new LaunchError("config", "SOLANA_RPC_URL is missing.");
   }
+  return url;
+}
+
+/** Dipakai juga oleh verify.ts untuk membaca address lookup table. */
+export function getRpc(cluster: Cluster) {
+  const url = getRpcUrl(cluster);
   if (!url.startsWith("https://")) {
-    throw new LaunchError("config", "SOLANA_RPC_URL must start with https://");
+    throw new LaunchError("config", `The ${cluster} RPC address must start with https://`);
   }
   return createSolanaRpc(url);
 }
 
-/** true kalau alamat RPC sudah diisi. Dipakai untuk memberi pesan yang jelas lebih awal. */
-export function isRpcConfigured() {
+/** true kalau alamat RPC untuk jaringan ini sudah tersedia. */
+export function isRpcConfigured(cluster: Cluster) {
+  if (cluster === "devnet") return true;
   return Boolean(process.env.SOLANA_RPC_URL?.trim());
 }
 
@@ -58,8 +70,12 @@ export type SimulationResult = {
  * Menjalankan transaksi "seolah-olah" di node RPC tanpa mengirimnya ke jaringan.
  * Tanda tangan tidak diperiksa (sigVerify: false), jadi ini bisa dipakai sebelum user tanda tangan.
  */
-export async function simulateTransaction(wireTransaction: Uint8Array, payer: string): Promise<SimulationResult> {
-  const rpc = getRpc();
+export async function simulateTransaction(
+  wireTransaction: Uint8Array,
+  payer: string,
+  cluster: Cluster,
+): Promise<SimulationResult> {
+  const rpc = getRpc(cluster);
   const address = payer as Address;
 
   let before: bigint;
@@ -105,10 +121,24 @@ async function runSimulation(rpc: ReturnType<typeof getRpc>, wireTransaction: Ui
  * Pemeriksaan terakhir sebelum transaksi dikirim ke wallet user.
  * Menolak kalau transaksinya gagal di simulasi atau biayanya di luar batas wajar.
  */
-export async function assertSafeToSign(wireTransaction: Uint8Array, payer: string): Promise<SimulationResult> {
-  const result = await simulateTransaction(wireTransaction, payer);
+export async function assertSafeToSign(
+  wireTransaction: Uint8Array,
+  payer: string,
+  cluster: Cluster,
+): Promise<SimulationResult> {
+  const result = await simulateTransaction(wireTransaction, payer, cluster);
 
   if (!result.ok) {
+    // Saldo kurang adalah kasus paling sering, dan pesan aslinya tidak ramah.
+    // "AccountNotFound" = wallet sama sekali belum pernah menerima SOL di jaringan ini.
+    if (isNotEnoughSol(result.error)) {
+      throw new LaunchError(
+        "insufficient_funds",
+        cluster === "devnet"
+          ? "This wallet has no devnet SOL. Get some free at faucet.solana.com, then try again."
+          : "Your wallet doesn't have enough SOL. Creating a coin costs about 0.011 SOL.",
+      );
+    }
     // Baris log terakhir biasanya menjelaskan penyebabnya.
     const lastLog = result.logs.at(-1);
     throw new LaunchError(
@@ -127,8 +157,8 @@ export async function assertSafeToSign(wireTransaction: Uint8Array, payer: strin
 }
 
 /** Mengirim transaksi yang sudah ditandatangani user. Mengembalikan tanda tangan transaksi. */
-export async function sendSignedTransaction(wireTransaction: Uint8Array): Promise<string> {
-  const rpc = getRpc();
+export async function sendSignedTransaction(wireTransaction: Uint8Array, cluster: Cluster): Promise<string> {
+  const rpc = getRpc(cluster);
   try {
     return await rpc
       .sendTransaction(toBase64(wireTransaction), {
@@ -147,8 +177,8 @@ export async function sendSignedTransaction(wireTransaction: Uint8Array): Promis
  * Menunggu sampai transaksi benar-benar masuk blockchain.
  * Mengembalikan true kalau berhasil; melempar error kalau transaksinya gagal atau kelamaan.
  */
-export async function waitForTransaction(signature: string): Promise<void> {
-  const rpc = getRpc();
+export async function waitForTransaction(signature: string, cluster: Cluster): Promise<void> {
+  const rpc = getRpc(cluster);
   const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
 
   while (Date.now() < deadline) {
@@ -179,14 +209,24 @@ export async function waitForTransaction(signature: string): Promise<void> {
 }
 
 /** true kalau alamat ini sudah ada di blockchain. Dipakai untuk memastikan koinnya benar-benar jadi. */
-export async function accountExists(address: string): Promise<boolean> {
-  const rpc = getRpc();
+export async function accountExists(address: string, cluster: Cluster): Promise<boolean> {
+  const rpc = getRpc(cluster);
   try {
     const response = await rpc.getAccountInfo(address as Address, { encoding: "base64" }).send();
     return response.value !== null;
   } catch (error) {
     throw toRpcError(error, "look up the coin");
   }
+}
+
+/** Nama error Solana yang artinya "SOL user tidak cukup". */
+function isNotEnoughSol(error: string | null) {
+  if (!error) return false;
+  return (
+    error.includes("InsufficientFundsForRent") ||
+    error.includes("AccountNotFound") ||
+    error.includes("InsufficientFunds")
+  );
 }
 
 function describeError(error: unknown) {
