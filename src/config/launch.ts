@@ -14,11 +14,14 @@ export const LAUNCH = {
   metadataUriMaxLength: 200,
 
   /**
-   * Pembelian awal oleh pembuat koin, dalam SOL.
-   * 0 = tidak beli apa-apa, jadi tidak ada fee 0,5% PumpPortal maupun fee 0,95% pump.fun.
-   * User bisa beli sendiri di pump.fun setelah koinnya jadi.
+   * Pembelian awal oleh pembuat koin, dalam SOL. Pembuat langsung memegang
+   * sedikit koinnya sendiri.
+   *
+   * Tidak boleh 0: API resmi pump.fun menolaknya ("solLamports must be > 0").
+   * Angka ini sengaja kecil supaya biayanya hampir tidak terasa — dari 0,0001 SOL,
+   * fee perdagangan pump.fun (0,95%) cuma sekitar 0,000001 SOL.
    */
-  devBuySol: 0,
+  devBuySol: 0.0001,
   /** Toleransi selisih harga untuk pembelian awal, dalam persen. Tidak terpakai kalau devBuySol = 0. */
   slippagePercent: 10,
   /** Priority fee supaya transaksi cepat masuk, dalam SOL. */
@@ -57,8 +60,11 @@ if (LAUNCH.nameMaxLength < 1 || LAUNCH.nameMaxLength > 32) {
 if (LAUNCH.tickerMaxLength > 10) {
   throw new Error("src/config/launch.ts: tickerMaxLength maksimal 10 (batas on-chain).");
 }
-if (LAUNCH.devBuySol < 0 || !Number.isFinite(LAUNCH.devBuySol)) {
-  throw new Error("src/config/launch.ts: devBuySol tidak boleh negatif.");
+if (!Number.isFinite(LAUNCH.devBuySol) || LAUNCH.devBuySol <= 0) {
+  throw new Error("src/config/launch.ts: devBuySol harus lebih dari 0 (API resmi pump.fun menolak 0).");
+}
+if (LAUNCH.devBuySol > LAUNCH.maxCostSol) {
+  throw new Error("src/config/launch.ts: devBuySol tidak boleh melebihi maxCostSol.");
 }
 if (LAUNCH.priorityFeeSol < 0 || LAUNCH.priorityFeeSol > 0.05) {
   throw new Error("src/config/launch.ts: priorityFeeSol harus antara 0 dan 0.05 SOL.");

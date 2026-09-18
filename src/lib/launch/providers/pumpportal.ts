@@ -28,6 +28,12 @@ const MAX_TRANSACTION_BYTES = 1232;
 const MIN_TRANSACTION_BYTES = 64;
 
 async function buildCreateTransaction(input: BuildCreateTransactionInput): Promise<BuildCreateTransactionResult> {
+  // Provider ini tidak membuat kunci mint sendiri, jadi alamatnya harus kita siapkan.
+  const mintAddress = input.mint;
+  if (!mintAddress) {
+    throw new LaunchError("config", "PumpPortal needs a mint address prepared by the server.");
+  }
+
   const body = {
     publicKey: input.creator,
     action: "create" as const,
@@ -36,7 +42,7 @@ async function buildCreateTransaction(input: BuildCreateTransactionInput): Promi
       symbol: input.ticker,
       uri: input.metadataUri,
     },
-    mint: input.mint,
+    mint: mintAddress,
     // Angka pembelian awal dihitung dalam SOL, bukan dalam jumlah token.
     denominatedInSol: "true",
     amount: input.devBuySol,
@@ -79,7 +85,7 @@ async function buildCreateTransaction(input: BuildCreateTransactionInput): Promi
     );
   }
 
-  return { transaction: bytes, provider: "pumpportal" };
+  return { transaction: bytes, mintAddress, provider: "pumpportal" };
 }
 
 function isTimeout(error: unknown) {
@@ -125,6 +131,8 @@ export const pumpPortalProvider: LaunchProvider = {
   // PumpPortal tidak menyediakan devnet sama sekali (dinyatakan di FAQ resmi mereka).
   cluster: "mainnet",
   isReal: true,
+  // Server kita yang menyiapkan kunci mint, memakainya sekali, lalu membuangnya.
+  ownsMintKey: false,
   allowedPrograms: [
     PROGRAMS.pumpFun,
     PROGRAMS.system,

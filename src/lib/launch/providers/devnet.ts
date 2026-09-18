@@ -44,6 +44,11 @@ import {
 const DECIMALS = 6;
 
 async function buildCreateTransaction(input: BuildCreateTransactionInput): Promise<BuildCreateTransactionResult> {
+  const mintAddress = input.mint;
+  if (!mintAddress) {
+    throw new LaunchError("config", "The devnet provider needs a mint address prepared by the server.");
+  }
+
   const rpc = getRpc("devnet");
 
   // Akun mint harus dibayar sewanya di muka, sesuai ukurannya.
@@ -64,7 +69,7 @@ async function buildCreateTransaction(input: BuildCreateTransactionInput): Promi
   // createNoopSigner = "akun ini WAJIB tanda tangan", tapi tanda tangannya menyusul:
   // mint ditandatangani server (lihat index.ts), creator ditandatangani user di wallet-nya.
   const creator = createNoopSigner(input.creator as Address);
-  const mint = createNoopSigner(input.mint as Address);
+  const mint = createNoopSigner(mintAddress as Address);
 
   const message = pipe(
     createTransactionMessage({ version: 0 }),
@@ -98,6 +103,7 @@ async function buildCreateTransaction(input: BuildCreateTransactionInput): Promi
   const transaction = compileTransaction(message);
   return {
     transaction: new Uint8Array(getTransactionEncoder().encode(transaction)),
+    mintAddress,
     provider: "devnet",
   };
 }
@@ -107,6 +113,7 @@ export const devnetProvider: LaunchProvider = {
   cluster: "devnet",
   // Koin ini tidak bernilai dan tidak ada di pump.fun. UI harus mengatakannya dengan jelas.
   isReal: false,
+  ownsMintKey: false,
   allowedPrograms: [PROGRAMS.system, PROGRAMS.token, PROGRAMS.memo, PROGRAMS.computeBudget],
   requiredProgram: PROGRAMS.token,
   buildCreateTransaction,

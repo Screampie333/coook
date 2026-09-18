@@ -4,6 +4,7 @@ import { getTransactionEncoder, partiallySignTransaction } from "@solana/kit";
 import { LAUNCH } from "@/config/launch";
 import { createMintKeyPair } from "./mint-key";
 import { devnetProvider } from "./providers/devnet";
+import { pumpFunProvider } from "./providers/pumpfun";
 import { pumpPortalProvider } from "./providers/pumpportal";
 import { assertSafeToSign, type SimulationResult } from "./rpc";
 import { LaunchError, type Cluster, type LaunchProvider } from "./types";
@@ -13,7 +14,8 @@ import { inspectCreateTransaction, type CreateTransactionReport } from "./verify
  * Pintu masuk fitur "Serve" untuk seluruh aplikasi.
  *
  * Kode fitur cukup memanggil prepareCreateTransaction(). Provider dipilih lewat env:
- *   LAUNCH_PROVIDER=pumpportal  (default) — koin sungguhan di pump.fun, mainnet, bayar SOL asli
+ *   LAUNCH_PROVIDER=pumpfun     (default) — API RESMI pump.fun, mainnet, bayar SOL asli
+ *   LAUNCH_PROVIDER=pumpportal            — pihak ketiga, cadangan kalau API resmi bermasalah
  *   LAUNCH_PROVIDER=devnet                — token latihan di devnet, gratis, untuk testing
  *
  * Menambah cara lain (misalnya SDK on-chain pump.fun):
@@ -22,9 +24,10 @@ import { inspectCreateTransaction, type CreateTransactionReport } from "./verify
  * Kode fitur tidak perlu diubah.
  */
 
-const DEFAULT_PROVIDER = "pumpportal";
+const DEFAULT_PROVIDER = "pumpfun";
 
 const PROVIDERS = new Map<string, LaunchProvider>([
+  [pumpFunProvider.name, pumpFunProvider],
   [pumpPortalProvider.name, pumpPortalProvider],
   [devnetProvider.name, devnetProvider],
 ]);
@@ -78,11 +81,14 @@ export type PreparedCreateTransaction = {
  */
 export async function prepareCreateTransaction(input: PrepareCreateInput): Promise<PreparedCreateTransaction> {
   const provider = getLaunchProvider();
-  const mint = await createMintKeyPair();
+
+  // Provider resmi pump.fun memegang kunci mint sendiri. Untuk yang lain, server
+  // membuat kunci sementara di sini, memakainya sekali, lalu membuangnya.
+  const mint = provider.ownsMintKey ? null : await createMintKeyPair();
 
   const built = await provider.buildCreateTransaction({
     creator: input.creator,
-    mint: mint.address,
+    mint: mint?.address,
     name: input.name,
     ticker: input.ticker,
     metadataUri: input.metadataUri,
@@ -91,19 +97,30 @@ export async function prepareCreateTransaction(input: PrepareCreateInput): Promi
     priorityFeeSol: LAUNCH.priorityFeeSol,
   });
 
+  // Alamat mint yang dipakai provider harus sama dengan yang kita siapkan,
+  // supaya provider tidak bisa diam-diam menukarnya.
+  if (mint && built.mintAddress !== mint.address) {
+    throw new LaunchError(
+      "unsafe_transaction",
+      "Coook refused the transaction because the coin address does not match the one it prepared.",
+    );
+  }
+
   const { transaction, report } = await inspectCreateTransaction(
     built.transaction,
-    { creator: input.creator, mint: mint.address },
+    { creator: input.creator, mint: built.mintAddress },
     provider,
   );
 
-  const signed = await partiallySignTransaction([mint.keyPair], transaction);
+  // Kalau kuncinya milik kita, tanda tangani sekarang. Kalau milik provider,
+  // transaksinya memang sudah ditandatangani sejak diterima.
+  const signed = mint ? await partiallySignTransaction([mint.keyPair], transaction) : transaction;
   const bytes = new Uint8Array(getTransactionEncoder().encode(signed));
 
   const simulation = await assertSafeToSign(bytes, input.creator, provider.cluster);
 
   return {
-    mintAddress: mint.address,
+    mintAddress: built.mintAddress,
     transaction: bytes,
     report,
     simulation,

@@ -7,8 +7,11 @@
 export type BuildCreateTransactionInput = {
   /** Alamat wallet pembuat koin (base58). Dia yang membayar biaya dan tanda tangan. */
   creator: string;
-  /** Alamat mint koin baru (base58). Keypair-nya dibuat di server dan dipakai sekali. */
-  mint: string;
+  /**
+   * Alamat mint koin baru (base58), untuk provider yang butuh kita menyiapkan kuncinya.
+   * Kosong kalau provider membuat dan menandatangani kunci mint sendiri (lihat ownsMintKey).
+   */
+  mint?: string;
   name: string;
   /** Ticker tanpa tanda $. */
   ticker: string;
@@ -21,8 +24,14 @@ export type BuildCreateTransactionInput = {
 };
 
 export type BuildCreateTransactionResult = {
-  /** Transaksi mentah (wire format) yang belum ditandatangani siapa pun. */
+  /**
+   * Transaksi mentah (wire format).
+   * Kalau provider punya kunci mint sendiri, transaksi ini sudah ditandatangani mint,
+   * dan hanya tinggal menunggu tanda tangan user.
+   */
   transaction: Uint8Array;
+  /** Alamat koin baru. Ini yang jadi contract address. */
+  mintAddress: string;
   provider: string;
 };
 
@@ -42,6 +51,12 @@ export interface LaunchProvider {
   allowedPrograms: readonly string[];
   /** Program yang WAJIB dipanggil, sebagai bukti transaksinya memang membuat koin. */
   requiredProgram: string;
+  /**
+   * true  = provider membuat kunci mint sendiri dan mengembalikan transaksi
+   *         yang sudah ditandatangani mint. Server kita tidak pernah memegang kunci itu.
+   * false = server kita yang membuat kunci mint, memakainya sekali, lalu membuangnya.
+   */
+  ownsMintKey: boolean;
   buildCreateTransaction(input: BuildCreateTransactionInput): Promise<BuildCreateTransactionResult>;
 }
 
