@@ -47,8 +47,17 @@ export function isIpfsConfigured() {
   return Boolean(process.env.PINATA_JWT?.trim());
 }
 
+/**
+ * Alamat untuk membuka file IPFS.
+ *
+ * Gateway publik ipfs.io kadang menolak permintaan yang terlalu rapat (HTTP 429).
+ * Alamat ini tersimpan PERMANEN di blockchain, jadi kalau punya gateway sendiri
+ * (Pinata memberi satu gratis per akun, bentuknya xxx.mypinata.cloud),
+ * isi PINATA_GATEWAY di .env.local supaya gambar koin lebih andal muncul.
+ */
 export function ipfsUrl(cid: string) {
-  return `${LAUNCH.ipfsGateway}${cid}`;
+  const gateway = process.env.PINATA_GATEWAY?.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return gateway ? `https://${gateway}/ipfs/${cid}` : `${LAUNCH.ipfsGateway}${cid}`;
 }
 
 async function uploadFile(data: Uint8Array, filename: string, contentType: string): Promise<UploadedFile> {
