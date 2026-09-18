@@ -29,8 +29,13 @@ export const LAUNCH = {
    * Kalau hasil simulasi menunjukkan user harus membayar lebih dari ini, transaksi DITOLAK
    * dan tidak pernah sampai ke wallet user. Ini jaring pengaman kalau transaksi dari
    * pihak ketiga ternyata berisi sesuatu yang tidak kita harapkan.
+   *
+   * Angka acuannya diukur dari transaksi pembuatan koin sungguhan di mainnet:
+   * sewa akun 0,0097 SOL + fee jaringan, jadi sekitar 0,011 SOL dengan priority fee kita.
+   * Batas 0,05 memberi kelonggaran kalau biaya on-chain naik, sekaligus membatasi
+   * kerugian maksimal kalau transaksinya ternyata bermasalah.
    */
-  maxCostSol: 0.1,
+  maxCostSol: 0.05,
 
   /** Gateway untuk membuka file IPFS. */
   ipfsGateway: "https://ipfs.io/ipfs/",
