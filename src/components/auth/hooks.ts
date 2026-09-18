@@ -57,12 +57,16 @@ export function loginErrorMessage(code: PrivyErrorCode): string | null {
   switch (`${code}`) {
     case "exited_auth_flow":
       return null;
-    case "generic_connect_wallet_error":
-    case "unknown_connect_wallet_error":
     case "unable_to_sign":
       return "Signature rejected in your wallet. Try again.";
+    // Privy memakai kode ini untuk apa pun yang gagal saat menghubungi wallet.
+    // Yang paling sering: jendela persetujuan Phantom terbuka di belakang, atau Phantom terkunci.
+    case "generic_connect_wallet_error":
+    case "unknown_connect_wallet_error":
+    case "no_solana_accounts":
+      return "Couldn't reach your wallet. Open the Phantom extension — a request may be waiting there — then try again.";
     case "client_request_timeout":
-      return "Your wallet didn't respond. Try again.";
+      return "Your wallet didn't respond. Open the Phantom extension, then try again.";
     case "too_many_requests":
       return "Too many attempts. Wait a moment and try again.";
     case "disallowed_login_method":
