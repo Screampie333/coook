@@ -35,6 +35,24 @@ export function errorResponse(
 }
 
 /**
+ * Ada pengaturan server yang belum diisi (env kosong).
+ *
+ * Nama variabelnya hanya ikut ditampilkan saat development, supaya saat ngoding
+ * langsung ketahuan apa yang kurang tanpa harus membuka terminal. Di production
+ * user cuma melihat pesan umum, karena isi pengaturan server bukan urusan mereka.
+ */
+export function setupErrorResponse(logLabel: string, missing: string, whatIsBroken: string) {
+  console.error(`[${logLabel}] ${missing} is missing.`);
+
+  const message =
+    process.env.NODE_ENV === "production"
+      ? `${whatIsBroken} isn't set up yet. Try again later.`
+      : `${whatIsBroken} isn't set up yet: ${missing} is missing from .env.local.`;
+
+  return errorResponse(500, "server_error", message);
+}
+
+/**
  * Mengubah error fitur Serve jadi respons HTTP.
  * Error selain LaunchError diteruskan ke aiErrorResponse.
  *

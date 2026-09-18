@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { LAUNCH } from "@/config/launch";
 import { isModerationConfigured } from "@/lib/ai";
-import { errorResponse, launchErrorResponse } from "@/lib/cook/api-errors";
+import { errorResponse, launchErrorResponse, setupErrorResponse } from "@/lib/cook/api-errors";
 import { CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
 import { hasConfirmedLaunch, insertPendingLaunch } from "@/lib/db/launches";
 import { getMemeForOwner } from "@/lib/db/memes";
@@ -87,16 +87,13 @@ export async function POST(request: Request) {
 
   // 3. Semua yang dibutuhkan sudah diatur di server?
   if (!isDatabaseConfigured()) {
-    console.error("[api/serve] SUPABASE_URL or SUPABASE_SECRET_KEY is missing.");
-    return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
+    return setupErrorResponse("api/serve", "SUPABASE_URL or SUPABASE_SECRET_KEY", "The kitchen");
   }
   if (!isIpfsConfigured()) {
-    console.error("[api/serve] PINATA_JWT is missing.");
-    return errorResponse(500, "server_error", "Serving coins isn't set up yet. Try again later.");
+    return setupErrorResponse("api/serve", "PINATA_JWT", "Serving coins");
   }
   if (!isModerationConfigured()) {
-    console.error("[api/serve] The moderation provider has no API key.");
-    return errorResponse(500, "server_error", "Serving coins isn't set up yet. Try again later.");
+    return setupErrorResponse("api/serve", "the moderation provider's API key", "Serving coins");
   }
 
   let provider;
@@ -106,8 +103,8 @@ export async function POST(request: Request) {
     return launchErrorResponse(error, "api/serve");
   }
   if (!isRpcConfigured(provider.cluster)) {
-    console.error("[api/serve] SOLANA_RPC_URL is missing.");
-    return errorResponse(500, "server_error", "Serving coins isn't set up yet. Try again later.");
+    // Devnet punya RPC publik bawaan, jadi ini hanya bisa terjadi di mainnet.
+    return setupErrorResponse("api/serve", "SOLANA_RPC_URL", "Serving coins on mainnet");
   }
 
   const text = {

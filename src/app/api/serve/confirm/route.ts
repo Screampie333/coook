@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { errorResponse, launchErrorResponse } from "@/lib/cook/api-errors";
+import { errorResponse, launchErrorResponse, setupErrorResponse } from "@/lib/cook/api-errors";
 import { findPendingLaunch, markLaunchConfirmed, markLaunchFailed } from "@/lib/db/launches";
 import { accountExists, getLaunchProvider, LaunchError, sendSignedTransaction, waitForTransaction } from "@/lib/launch";
 import { coinUrl, explorerTransactionUrl } from "@/lib/launch/links";
@@ -48,8 +48,7 @@ export async function POST(request: Request) {
   }
 
   if (!isDatabaseConfigured()) {
-    console.error("[api/serve] SUPABASE_URL or SUPABASE_SECRET_KEY is missing.");
-    return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
+    return setupErrorResponse("api/serve/confirm", "SUPABASE_URL or SUPABASE_SECRET_KEY", "The kitchen");
   }
 
   let provider;
