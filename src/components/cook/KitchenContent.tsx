@@ -1,11 +1,12 @@
 "use client";
 
-import { Coins, CookingPot, Loader2, Pencil } from "lucide-react";
+import { Coins, CookingPot, ExternalLink, Loader2, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authFetch } from "@/components/auth/hooks";
 import { Card, CardEmpty } from "@/components/ui/Card";
 import type { LaunchSummary, MemeSummary } from "@/lib/cook/meme-types";
 import { shortenAddress } from "@/lib/format";
+import { coinUrl } from "@/lib/launch/links";
 import { recordCaptionChoice } from "./caption-choice";
 import { MemeCard, type CaptionChoice } from "./MemeCard";
 import { MemeGridCard } from "./MemeGridCard";
@@ -193,7 +194,7 @@ export function KitchenContent() {
       <section>
         <Card icon={Coins} title="Your coins" right={<span className="font-mono">{launches.length}</span>}>
           {launches.length === 0 ? (
-            <CardEmpty>No coins served yet. Serving memes as pump.fun coins is coming soon.</CardEmpty>
+            <CardEmpty>No coins served yet. Open a meme and hit Serve as coin to make one.</CardEmpty>
           ) : (
             <ul>
               {launches.map((launch) => (
@@ -201,11 +202,24 @@ export function KitchenContent() {
                   key={launch.id}
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-3 text-sm last:border-b-0"
                 >
-                  <span className="font-bold text-ink">{launch.name}</span>
+                  <a
+                    href={coinUrl(launch.mintAddress, launch.cluster)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-bold text-ink underline-offset-2 hover:text-accent hover:underline"
+                  >
+                    {launch.name}
+                    <ExternalLink className="size-3 text-dim" />
+                  </a>
                   <span className="font-mono text-xs text-accent">${launch.ticker}</span>
                   <span className="font-mono text-xs text-dim" title={launch.mintAddress}>
                     {shortenAddress(launch.mintAddress)}
                   </span>
+                  {launch.cluster === "devnet" && (
+                    <span className="rounded-full border border-line px-2 py-0.5 text-[10px] font-bold tracking-wide text-dim uppercase">
+                      devnet test
+                    </span>
+                  )}
                   <time dateTime={launch.createdAt} className="ml-auto text-xs text-dim">
                     {formatDate(launch.createdAt)}
                   </time>

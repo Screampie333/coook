@@ -8,6 +8,7 @@ import { hasDrawableText } from "@/lib/cook/caption-layout";
 import { CAPTION_COUNT, CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
 import { recordCaptionChoice } from "./caption-choice";
 import { renderMeme } from "./render-meme";
+import { ServeDialog } from "./ServeDialog";
 
 export type CookedResult = {
   /** id baris meme di database. */
@@ -65,7 +66,7 @@ export function MemeCard({
   loreName,
 }: MemeCardProps) {
   const groupName = useId();
-  const [showServeNote, setShowServeNote] = useState(false);
+  const [serving, setServing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
   const [rendered, setRendered] = useState<{ picture: string; caption: string; image: string } | null>(null);
   const [renderFailed, setRenderFailed] = useState(false);
@@ -252,7 +253,7 @@ export function MemeCard({
                     )}
                     <button
                       type="button"
-                      onClick={() => setShowServeNote(true)}
+                      onClick={() => setServing(true)}
                       className={`${secondaryButton} ${onCookAgain ? "" : "col-span-2"}`}
                     >
                       <Rocket className="size-4" />
@@ -271,17 +272,22 @@ export function MemeCard({
                       Download failed. Right-click the image and save it instead.
                     </p>
                   )}
-                  {showServeNote && (
-                    <p role="status" className="text-center text-[13px] text-muted">
-                      Serving memes as pump.fun coins is coming soon.
-                    </p>
-                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
       </Card>
+
+      {serving && result && (
+        <ServeDialog
+          memeId={result.memeId}
+          picture={result.picture}
+          caption={withCaption ? captionText : ""}
+          suggestedName={loreName ?? undefined}
+          onClose={() => setServing(false)}
+        />
+      )}
     </div>
   );
 }
