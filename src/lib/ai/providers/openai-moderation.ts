@@ -133,4 +133,5 @@ async function toHttpError(response: Response) {
 export const openaiModerationProvider: ModerationProvider = {
   name: "openai",
   moderate,
+  isConfigured: () => Boolean(process.env.OPENAI_API_KEY?.trim()),
 };

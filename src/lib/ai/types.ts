@@ -82,6 +82,8 @@ export type ModerationResult = {
 export interface ModerationProvider {
   name: string;
   moderate(input: ModerationInput): Promise<ModerationResult>;
+  /** true kalau key yang dibutuhkan provider ini sudah diisi. */
+  isConfigured(): boolean;
 }
 
 export type AiErrorCode =

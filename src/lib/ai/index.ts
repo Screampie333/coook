@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cloudflareImageProvider } from "./providers/cloudflare";
+import { groqModerationProvider } from "./providers/groq-moderation";
 import { groqProvider } from "./providers/groq";
 import { openaiModerationProvider } from "./providers/openai-moderation";
 import {
@@ -23,7 +24,8 @@ import {
  * Provider dipilih lewat env:
  *   AI_TEXT_PROVIDER=groq          (default)
  *   AI_IMAGE_PROVIDER=cloudflare   (default)
- *   AI_MODERATION_PROVIDER=openai  (default)
+ *   AI_MODERATION_PROVIDER=groq    (default; text only, free. "openai" juga tersedia dan bisa
+ *                                   memeriksa gambar sekaligus, tapi butuh kartu dan $5 kredit awal)
  *
  * Menambah provider baru (misalnya gemini untuk teks):
  *   1. Buat src/lib/ai/providers/gemini.ts yang mengekspor TextProvider.
@@ -33,7 +35,7 @@ import {
 
 const DEFAULT_TEXT_PROVIDER = "groq";
 const DEFAULT_IMAGE_PROVIDER = "cloudflare";
-const DEFAULT_MODERATION_PROVIDER = "openai";
+const DEFAULT_MODERATION_PROVIDER = "groq";
 
 const TEXT_PROVIDERS = new Map<string, TextProvider>([[groqProvider.name, groqProvider]]);
 
@@ -42,6 +44,7 @@ const IMAGE_PROVIDERS = new Map<string, ImageProvider>([
 ]);
 
 const MODERATION_PROVIDERS = new Map<string, ModerationProvider>([
+  [groqModerationProvider.name, groqModerationProvider],
   [openaiModerationProvider.name, openaiModerationProvider],
 ]);
 
@@ -69,7 +72,11 @@ export function getModerationProvider(): ModerationProvider {
 
 /** true kalau filter isi sudah diatur. Dipakai untuk memberi pesan yang jelas lebih awal. */
 export function isModerationConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  try {
+    return getModerationProvider().isConfigured();
+  } catch {
+    return false;
+  }
 }
 
 export async function generateText(input: GenerateTextInput): Promise<GenerateTextResult> {
