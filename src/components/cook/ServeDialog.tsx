@@ -95,10 +95,15 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
   async function signAndSend(coin: PreparedCoin) {
     setError(null);
 
-    // Wallet yang dipakai harus wallet yang sedang terhubung.
-    const wallet = wallets[0];
+    // Transaksi ini hanya sah kalau ditandatangani wallet yang server sebutkan.
+    // Kalau user menghubungkan beberapa wallet, yang lain tidak akan diterima.
+    const wallet = wallets.find((candidate) => candidate.address === coin.walletAddress);
     if (!wallet) {
-      setError("No wallet connected. Reconnect your wallet and try again.");
+      setError(
+        coin.walletAddress
+          ? "This coin is set up for a different wallet. Switch back to the wallet you logged in with."
+          : "No wallet connected. Reconnect your wallet and try again.",
+      );
       return;
     }
 

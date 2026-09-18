@@ -20,6 +20,8 @@ export type PreparedCoin = {
   cluster: CoinCluster;
   /** false = token latihan di devnet, bukan koin pump.fun sungguhan. */
   isReal: boolean;
+  /** Wallet yang harus menandatangani, menurut server. */
+  walletAddress: string;
   /** Transaksi base64 yang sudah ditandatangani mint, tinggal ditandatangani user. */
   transaction: string;
   /** Perkiraan SOL yang akan keluar dari wallet user. */
@@ -61,6 +63,7 @@ export async function prepareCoin(draft: CoinDraft): Promise<ServeResult<Prepare
       ticker: String(coin.ticker ?? ""),
       cluster: coin.cluster === "devnet" ? "devnet" : "mainnet",
       isReal: coin.isReal !== false,
+      walletAddress: String(coin.walletAddress ?? ""),
       transaction: body.transaction,
       costSol: typeof body.costSol === "number" ? body.costSol : 0,
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : "",

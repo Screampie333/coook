@@ -164,6 +164,9 @@ export async function POST(request: Request) {
           ticker: text.ticker,
           cluster: prepared.cluster,
           isReal: prepared.isReal,
+          // Wallet yang HARUS menandatangani. Browser bisa punya beberapa wallet terhubung,
+          // dan hanya yang ini yang tanda tangannya diterima.
+          walletAddress: wallet,
         },
         transaction: Buffer.from(prepared.transaction).toString("base64"),
         costSol: prepared.simulation.costSol,
