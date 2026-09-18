@@ -24,7 +24,11 @@ import {
 
 type ServeDialogProps = {
   memeId: string;
-  /** Gambar meme tanpa caption, untuk pratinjau. */
+  /**
+   * Gambar yang sudah dilihat user di layar (lengkap dengan caption-nya).
+   * Dipakai untuk pratinjau supaya muncul seketika, tanpa menunggu IPFS.
+   * Server menggambar ulang dengan kode tata letak yang sama, jadi hasilnya sama.
+   */
   picture: string;
   /** Caption yang sedang dipilih user. Ini yang akan digambar ke gambar koin. */
   caption: string;
@@ -137,14 +141,14 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
   const canSubmit = name.trim().length > 0 && cleanTicker(ticker).length >= LAUNCH.tickerMinLength;
 
   return (
+    // Sengaja TIDAK menutup saat area gelap di luar kotak diklik: sekali transaksi
+    // disiapkan, salah klik berarti kehilangan transaksi yang sudah jadi. Tutup lewat
+    // tombol X atau Esc saja.
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-bg/80 p-4 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby={`${fieldId}-title`}
-      onClick={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
-      }}
     >
       <div className="my-auto w-full max-w-lg rounded-2xl border border-line bg-panel shadow-2xl">
         {/* Judul */}
@@ -337,9 +341,11 @@ function ReviewStep({ coin, picture, step }: { coin: PreparedCoin; picture: stri
       )}
 
       <div className="flex gap-3">
+        {/* Gambar diambil dari yang sudah ada di browser, bukan dari IPFS:
+            gateway IPFS sering belum meng-cache file yang baru di-upload. */}
         <div className="relative size-24 flex-none overflow-hidden rounded-xl border border-line bg-panel-2">
           <Image
-            src={coin.imageUrl || picture}
+            src={picture}
             alt="Your coin's picture"
             width={256}
             height={256}

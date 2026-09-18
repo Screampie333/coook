@@ -282,7 +282,8 @@ export function MemeCard({
       {serving && result && (
         <ServeDialog
           memeId={result.memeId}
-          picture={result.picture}
+          // Gambar yang sedang dilihat user, caption-nya sudah menempel.
+          picture={shownImage ?? result.picture}
           caption={withCaption ? captionText : ""}
           suggestedName={loreName ?? undefined}
           onClose={() => setServing(false)}
