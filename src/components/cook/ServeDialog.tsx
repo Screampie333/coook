@@ -60,6 +60,7 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
   const [name, setName] = useState(suggestedName ?? "");
   const [ticker, setTicker] = useState(suggestedName ? cleanTicker(suggestedName).slice(0, 10) : "");
   const [description, setDescription] = useState("");
+  const [devBuy, setDevBuy] = useState(String(LAUNCH.defaultDevBuySol));
   const [step, setStep] = useState<Step>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +87,7 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
       ticker: cleanTicker(ticker),
       description: description.trim(),
       caption,
+      devBuySol: parsedDevBuy ?? LAUNCH.defaultDevBuySol,
     });
 
     if (!result.ok) {
@@ -138,7 +140,10 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
     setStep({ kind: "done", coin: result.data });
   }
 
-  const canSubmit = name.trim().length > 0 && cleanTicker(ticker).length >= LAUNCH.tickerMinLength;
+  // null = angkanya tidak bisa dibaca atau di luar batas.
+  const parsedDevBuy = parseDevBuy(devBuy);
+  const canSubmit =
+    name.trim().length > 0 && cleanTicker(ticker).length >= LAUNCH.tickerMinLength && parsedDevBuy !== null;
 
   return (
     // Sengaja TIDAK menutup saat area gelap di luar kotak diklik: sekali transaksi
@@ -179,6 +184,9 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
               onTicker={setTicker}
               description={description}
               onDescription={setDescription}
+              devBuy={devBuy}
+              onDevBuy={setDevBuy}
+              devBuyValid={parsedDevBuy !== null}
               caption={caption}
             />
           )}
@@ -244,6 +252,17 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
   );
 }
 
+/** Pilihan cepat jumlah pembelian awal, dalam SOL. */
+const DEV_BUY_PRESETS = [LAUNCH.defaultDevBuySol, 0.1, 0.5, 1];
+
+/** Membaca angka pembelian awal. null = tidak valid. */
+function parseDevBuy(value: string): number | null {
+  const amount = Number(value.replace(",", ".").trim());
+  if (!Number.isFinite(amount)) return null;
+  if (amount < LAUNCH.minDevBuySol || amount > LAUNCH.maxDevBuySol) return null;
+  return amount;
+}
+
 function FormStep({
   fieldId,
   name,
@@ -252,6 +271,9 @@ function FormStep({
   onTicker,
   description,
   onDescription,
+  devBuy,
+  onDevBuy,
+  devBuyValid,
   caption,
 }: {
   fieldId: string;
@@ -261,6 +283,9 @@ function FormStep({
   onTicker: (value: string) => void;
   description: string;
   onDescription: (value: string) => void;
+  devBuy: string;
+  onDevBuy: (value: string) => void;
+  devBuyValid: boolean;
   caption: string;
 }) {
   return (
@@ -302,6 +327,43 @@ function FormStep({
         </div>
         <p className="text-[11px] text-dim">
           Letters and numbers only, {LAUNCH.tickerMinLength}–{LAUNCH.tickerMaxLength} characters.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={`${fieldId}-devbuy`} className="text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
+          First buy
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id={`${fieldId}-devbuy`}
+            value={devBuy}
+            onChange={(event) => onDevBuy(event.target.value)}
+            inputMode="decimal"
+            className={`${fieldClass} font-mono ${devBuyValid ? "" : "border-warn"}`}
+          />
+          <span className="font-mono text-sm text-dim">SOL</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {DEV_BUY_PRESETS.map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => onDevBuy(String(amount))}
+              className={`cursor-pointer rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors ${
+                Number(devBuy) === amount
+                  ? "border-accent bg-accent-soft text-ink"
+                  : "border-line text-muted hover:border-line-hover hover:text-ink"
+              }`}
+            >
+              {amount === LAUNCH.defaultDevBuySol ? "none" : amount}
+            </button>
+          ))}
+        </div>
+        <p className={`text-[11px] ${devBuyValid ? "text-dim" : "text-warn"}`}>
+          {devBuyValid
+            ? "How much of your own coin you buy at launch. pump.fun needs at least a tiny amount, so “none” still buys the minimum."
+            : `Enter an amount between ${LAUNCH.minDevBuySol} and ${LAUNCH.maxDevBuySol} SOL.`}
         </p>
       </div>
 
@@ -361,12 +423,23 @@ function ReviewStep({ coin, picture, step }: { coin: PreparedCoin; picture: stri
       </div>
 
       <div className="rounded-lg border border-line bg-panel-2 px-3 py-2.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[13px] text-muted">You&apos;ll pay</span>
-          <span className="font-mono text-base font-bold text-ink">{coin.costSol.toFixed(4)} SOL</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="text-muted">Creating the coin</span>
+            <span className="font-mono text-ink">{coin.overheadSol.toFixed(4)} SOL</span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="text-muted">Your first buy</span>
+            <span className="font-mono text-ink">{coin.devBuySol.toFixed(4)} SOL</span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-1.5">
+            <span className="text-[13px] font-bold text-ink">You&apos;ll pay</span>
+            <span className="font-mono text-base font-bold text-ink">{coin.costSol.toFixed(4)} SOL</span>
+          </div>
         </div>
-        <p className="mt-1 text-[11px] text-dim">
-          Network fee and account rent. Coook takes nothing, and no tokens are bought for you.
+        <p className="mt-1.5 text-[11px] text-dim">
+          The first line is Solana&apos;s own network fee and account rent — not something Coook or pump.fun
+          charges. The second line comes back to you as your own coin.
         </p>
       </div>
 

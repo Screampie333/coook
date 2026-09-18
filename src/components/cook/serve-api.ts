@@ -24,8 +24,12 @@ export type PreparedCoin = {
   walletAddress: string;
   /** Transaksi base64 yang sudah ditandatangani mint, tinggal ditandatangani user. */
   transaction: string;
-  /** Perkiraan SOL yang akan keluar dari wallet user. */
+  /** Total SOL yang akan keluar dari wallet user. */
   costSol: number;
+  /** Bagian wajib: sewa akun + fee jaringan. */
+  overheadSol: number;
+  /** Bagian yang jadi koin milik user sendiri. */
+  devBuySol: number;
   /** Gambar koin yang sudah di-upload ke IPFS. */
   imageUrl: string;
 };
@@ -50,6 +54,8 @@ export type CoinDraft = {
   ticker: string;
   description: string;
   caption: string;
+  /** Berapa SOL yang dipakai user untuk membeli koinnya sendiri di awal. */
+  devBuySol: number;
 };
 
 export async function prepareCoin(draft: CoinDraft): Promise<ServeResult<PreparedCoin>> {
@@ -66,6 +72,8 @@ export async function prepareCoin(draft: CoinDraft): Promise<ServeResult<Prepare
       walletAddress: String(coin.walletAddress ?? ""),
       transaction: body.transaction,
       costSol: typeof body.costSol === "number" ? body.costSol : 0,
+      overheadSol: typeof body.overheadSol === "number" ? body.overheadSol : 0,
+      devBuySol: typeof body.devBuySol === "number" ? body.devBuySol : 0,
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : "",
     };
   });

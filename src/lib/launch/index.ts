@@ -50,6 +50,8 @@ export type PrepareCreateInput = {
   ticker: string;
   /** Alamat metadata JSON di IPFS. */
   metadataUri: string;
+  /** Pembelian awal yang dipilih user, dalam SOL. Kosong = pakai bawaan. */
+  devBuySol?: number;
 };
 
 export type PreparedCreateTransaction = {
@@ -61,6 +63,8 @@ export type PreparedCreateTransaction = {
   report: CreateTransactionReport;
   /** Hasil simulasi: perkiraan biaya yang dibayar user. */
   simulation: SimulationResult;
+  /** Pembelian awal yang benar-benar dipakai, dalam SOL. */
+  devBuySol: number;
   provider: string;
   cluster: Cluster;
   /** false = token latihan di devnet, bukan koin pump.fun sungguhan. */
@@ -81,6 +85,7 @@ export type PreparedCreateTransaction = {
  */
 export async function prepareCreateTransaction(input: PrepareCreateInput): Promise<PreparedCreateTransaction> {
   const provider = getLaunchProvider();
+  const devBuySol = input.devBuySol ?? LAUNCH.defaultDevBuySol;
 
   // Provider resmi pump.fun memegang kunci mint sendiri. Untuk yang lain, server
   // membuat kunci sementara di sini, memakainya sekali, lalu membuangnya.
@@ -92,7 +97,7 @@ export async function prepareCreateTransaction(input: PrepareCreateInput): Promi
     name: input.name,
     ticker: input.ticker,
     metadataUri: input.metadataUri,
-    devBuySol: LAUNCH.devBuySol,
+    devBuySol,
     slippagePercent: LAUNCH.slippagePercent,
     priorityFeeSol: LAUNCH.priorityFeeSol,
   });
@@ -117,13 +122,14 @@ export async function prepareCreateTransaction(input: PrepareCreateInput): Promi
   const signed = mint ? await partiallySignTransaction([mint.keyPair], transaction) : transaction;
   const bytes = new Uint8Array(getTransactionEncoder().encode(signed));
 
-  const simulation = await assertSafeToSign(bytes, input.creator, provider.cluster);
+  const simulation = await assertSafeToSign(bytes, input.creator, provider.cluster, devBuySol);
 
   return {
     mintAddress: built.mintAddress,
     transaction: bytes,
     report,
     simulation,
+    devBuySol,
     provider: built.provider,
     cluster: provider.cluster,
     isReal: provider.isReal,

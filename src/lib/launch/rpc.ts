@@ -61,8 +61,10 @@ export type SimulationResult = {
   ok: boolean;
   /** Pesan error dari jaringan kalau gagal. */
   error: string | null;
-  /** Perkiraan SOL yang keluar dari wallet user. */
+  /** Total SOL yang keluar dari wallet user, termasuk pembelian awal. */
   costSol: number;
+  /** Bagian di luar pembelian awal: sewa akun + fee jaringan. */
+  overheadSol: number;
   logs: string[];
 };
 
@@ -74,6 +76,8 @@ export async function simulateTransaction(
   wireTransaction: Uint8Array,
   payer: string,
   cluster: Cluster,
+  /** Pembelian awal yang memang diminta user, untuk memisahkannya dari biaya wajib. */
+  devBuySol = 0,
 ): Promise<SimulationResult> {
   const rpc = getRpc(cluster);
   const address = payer as Address;
@@ -95,11 +99,13 @@ export async function simulateTransaction(
   // Saldo sesudah transaksi dijalankan; selisihnya = yang dibayar user.
   const after = value.accounts?.[0]?.lamports ?? before;
   const costLamports = Number(before - after);
+  const costSol = costLamports > 0 ? costLamports / LAMPORTS_PER_SOL : 0;
 
   return {
     ok: value.err === null,
     error: value.err === null ? null : describeError(value.err),
-    costSol: costLamports > 0 ? costLamports / LAMPORTS_PER_SOL : 0,
+    costSol,
+    overheadSol: Math.max(costSol - devBuySol, 0),
     logs: value.logs ?? [],
   };
 }
@@ -125,8 +131,9 @@ export async function assertSafeToSign(
   wireTransaction: Uint8Array,
   payer: string,
   cluster: Cluster,
+  devBuySol = 0,
 ): Promise<SimulationResult> {
-  const result = await simulateTransaction(wireTransaction, payer, cluster);
+  const result = await simulateTransaction(wireTransaction, payer, cluster, devBuySol);
 
   if (!result.ok) {
     // Saldo kurang adalah kasus paling sering, dan pesan aslinya tidak ramah.
@@ -146,11 +153,13 @@ export async function assertSafeToSign(
       `Solana rejected the transaction in a test run: ${result.error}${lastLog ? ` (${lastLog})` : ""}`,
     );
   }
-  if (result.costSol > LAUNCH.maxCostSol) {
+  // Yang dibatasi hanya kelebihan di luar pembelian awal, karena jumlah pembelian
+  // itu memang dipilih user sendiri.
+  if (result.overheadSol > LAUNCH.maxOverheadSol) {
     throw new LaunchError(
       "unsafe_transaction",
-      `Coook refused the transaction because it would take ${result.costSol.toFixed(4)} SOL from your wallet, ` +
-        `more than the ${LAUNCH.maxCostSol} SOL limit.`,
+      `Coook refused the transaction because it would take ${result.overheadSol.toFixed(4)} SOL ` +
+        `on top of your first buy, more than the ${LAUNCH.maxOverheadSol} SOL limit.`,
     );
   }
   return result;

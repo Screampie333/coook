@@ -14,31 +14,36 @@ export const LAUNCH = {
   metadataUriMaxLength: 200,
 
   /**
-   * Pembelian awal oleh pembuat koin, dalam SOL. Pembuat langsung memegang
-   * sedikit koinnya sendiri.
+   * Pembelian awal oleh pembuat koin, dalam SOL. Dia langsung memegang koinnya sendiri.
+   * User yang menentukan jumlahnya di layar Serve.
    *
    * Tidak boleh 0: API resmi pump.fun menolaknya ("solLamports must be > 0").
-   * Angka ini sengaja kecil supaya biayanya hampir tidak terasa — dari 0,0001 SOL,
+   * Bawaannya sengaja kecil supaya hampir tidak terasa — dari 0,0001 SOL,
    * fee perdagangan pump.fun (0,95%) cuma sekitar 0,000001 SOL.
    */
-  devBuySol: 0.0001,
+  defaultDevBuySol: 0.0001,
+  minDevBuySol: 0.0001,
+  /** Batas atas, penjaga supaya salah ketik tidak berakibat fatal. */
+  maxDevBuySol: 10,
   /** Toleransi selisih harga untuk pembelian awal, dalam persen. Tidak terpakai kalau devBuySol = 0. */
   slippagePercent: 10,
   /** Priority fee supaya transaksi cepat masuk, dalam SOL. */
   priorityFeeSol: 0.0005,
 
   /**
-   * Batas aman biaya sekali mint, dalam SOL.
-   * Kalau hasil simulasi menunjukkan user harus membayar lebih dari ini, transaksi DITOLAK
-   * dan tidak pernah sampai ke wallet user. Ini jaring pengaman kalau transaksi dari
-   * pihak ketiga ternyata berisi sesuatu yang tidak kita harapkan.
+   * Batas aman biaya DI LUAR pembelian awal, dalam SOL (sewa akun + fee jaringan).
    *
-   * Angka acuannya diukur dari transaksi pembuatan koin sungguhan di mainnet:
-   * sewa akun 0,0097 SOL + fee jaringan, jadi sekitar 0,011 SOL dengan priority fee kita.
-   * Batas 0,05 memberi kelonggaran kalau biaya on-chain naik, sekaligus membatasi
-   * kerugian maksimal kalau transaksinya ternyata bermasalah.
+   * Kalau simulasi menunjukkan transaksi mengambil lebih dari (pembelian awal + angka ini),
+   * transaksi DITOLAK dan tidak pernah sampai ke wallet user. Ini jaring pengaman kalau
+   * transaksi dari pihak ketiga ternyata berisi sesuatu yang tidak kita harapkan.
+   *
+   * Yang dibatasi hanya kelebihannya, bukan totalnya, karena pembelian awal itu
+   * memang jumlah yang user pilih sendiri.
+   *
+   * Acuannya diukur dari transaksi sungguhan di mainnet: 0,0102 SOL.
+   * Batas 0,05 memberi kelonggaran kalau biaya on-chain naik.
    */
-  maxCostSol: 0.05,
+  maxOverheadSol: 0.05,
 
   /** Gateway untuk membuka file IPFS. */
   ipfsGateway: "https://ipfs.io/ipfs/",
@@ -60,15 +65,15 @@ if (LAUNCH.nameMaxLength < 1 || LAUNCH.nameMaxLength > 32) {
 if (LAUNCH.tickerMaxLength > 10) {
   throw new Error("src/config/launch.ts: tickerMaxLength maksimal 10 (batas on-chain).");
 }
-if (!Number.isFinite(LAUNCH.devBuySol) || LAUNCH.devBuySol <= 0) {
-  throw new Error("src/config/launch.ts: devBuySol harus lebih dari 0 (API resmi pump.fun menolak 0).");
+if (!Number.isFinite(LAUNCH.minDevBuySol) || LAUNCH.minDevBuySol <= 0) {
+  throw new Error("src/config/launch.ts: minDevBuySol harus lebih dari 0 (API resmi pump.fun menolak 0).");
 }
-if (LAUNCH.devBuySol > LAUNCH.maxCostSol) {
-  throw new Error("src/config/launch.ts: devBuySol tidak boleh melebihi maxCostSol.");
+if (LAUNCH.defaultDevBuySol < LAUNCH.minDevBuySol || LAUNCH.defaultDevBuySol > LAUNCH.maxDevBuySol) {
+  throw new Error("src/config/launch.ts: defaultDevBuySol harus antara minDevBuySol dan maxDevBuySol.");
 }
 if (LAUNCH.priorityFeeSol < 0 || LAUNCH.priorityFeeSol > 0.05) {
   throw new Error("src/config/launch.ts: priorityFeeSol harus antara 0 dan 0.05 SOL.");
 }
-if (LAUNCH.maxCostSol <= 0 || LAUNCH.maxCostSol > 1) {
-  throw new Error("src/config/launch.ts: maxCostSol harus lebih dari 0 dan maksimal 1 SOL.");
+if (LAUNCH.maxOverheadSol <= 0 || LAUNCH.maxOverheadSol > 1) {
+  throw new Error("src/config/launch.ts: maxOverheadSol harus lebih dari 0 dan maksimal 1 SOL.");
 }

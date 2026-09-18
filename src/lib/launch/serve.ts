@@ -61,6 +61,8 @@ export async function buildCoin(input: {
   /** Lokasi gambar polos di Supabase Storage. */
   imagePath: string;
   text: CoinText;
+  /** Pembelian awal pilihan user, dalam SOL. */
+  devBuySol?: number;
 }): Promise<BuiltCoin> {
   // Gambar diambil dari database kita, bukan dari browser, lalu caption digambar di server.
   const picture = await downloadMemeImage(input.imagePath);
@@ -79,6 +81,7 @@ export async function buildCoin(input: {
     name: input.text.name,
     ticker: input.text.ticker,
     metadataUri: metadata.metadataUri,
+    devBuySol: input.devBuySol,
   });
 
   return { prepared, metadata };

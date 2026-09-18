@@ -63,6 +63,13 @@ const bodySchema = z.object({
     .max(CUSTOM_CAPTION_MAX_LENGTH, `Keep the caption under ${CUSTOM_CAPTION_MAX_LENGTH} characters.`)
     .optional()
     .default(""),
+  /** Berapa SOL yang dipakai user untuk membeli koinnya sendiri di awal. */
+  devBuySol: z
+    .number("That first buy amount doesn't look right.")
+    .min(LAUNCH.minDevBuySol, `The first buy has to be at least ${LAUNCH.minDevBuySol} SOL.`)
+    .max(LAUNCH.maxDevBuySol, `Keep the first buy under ${LAUNCH.maxDevBuySol} SOL.`)
+    .optional()
+    .default(LAUNCH.defaultDevBuySol),
 });
 
 export async function POST(request: Request) {
@@ -137,6 +144,7 @@ export async function POST(request: Request) {
       memeId: meme.id,
       imagePath: meme.imagePath,
       text,
+      devBuySol: parsed.data.devBuySol,
     });
 
     // 8. Catat percobaannya, supaya saat confirm server tidak perlu percaya kiriman browser.
@@ -166,7 +174,10 @@ export async function POST(request: Request) {
           walletAddress: wallet,
         },
         transaction: Buffer.from(prepared.transaction).toString("base64"),
+        // Dipisah supaya user tahu mana biaya wajib, mana yang jadi koin miliknya.
         costSol: prepared.simulation.costSol,
+        overheadSol: prepared.simulation.overheadSol,
+        devBuySol: prepared.devBuySol,
         imageUrl: metadata.imageUrl,
       },
       { headers: { "Cache-Control": "no-store" } },
