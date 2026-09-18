@@ -63,6 +63,27 @@ export interface ImageProvider {
   generateImage(input: GenerateImageInput): Promise<GenerateImageResult>;
 }
 
+export type ModerationInput = {
+  /** Teks yang diperiksa, misalnya nama koin, ticker, deskripsi, caption. */
+  texts: string[];
+  /** Gambar yang diperiksa. Harus URL yang bisa dibuka publik. */
+  imageUrl?: string;
+};
+
+export type ModerationResult = {
+  /** true = ada yang melanggar dan tidak boleh diterbitkan. */
+  flagged: boolean;
+  /** Kategori yang melanggar, misalnya ["sexual/minors"]. Untuk log, bukan untuk ditampilkan ke user. */
+  categories: string[];
+  provider: string;
+  model: string;
+};
+
+export interface ModerationProvider {
+  name: string;
+  moderate(input: ModerationInput): Promise<ModerationResult>;
+}
+
 export type AiErrorCode =
   /** Provider menolak karena terlalu banyak request/token (HTTP 429). */
   | "rate_limited"
