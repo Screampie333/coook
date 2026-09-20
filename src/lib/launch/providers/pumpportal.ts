@@ -140,6 +140,10 @@ export const pumpPortalProvider: LaunchProvider = {
     PROGRAMS.associatedToken,
     PROGRAMS.metaplexMetadata,
     PROGRAMS.computeBudget,
+    // Muncul hanya kalau pembelian awal lebih dari 0. Diizinkan supaya user tetap
+    // bisa dev buy; yang benar-benar menjaga jumlah SOL keluar adalah batas biaya
+    // dari simulasi (maxOverheadSol), bukan daftar ini.
+    PROGRAMS.pumpPortalFee,
   ],
   requiredProgram: PROGRAMS.pumpFun,
   buildCreateTransaction,

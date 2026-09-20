@@ -252,8 +252,8 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
   );
 }
 
-/** Pilihan cepat jumlah pembelian awal, dalam SOL. */
-const DEV_BUY_PRESETS = [LAUNCH.defaultDevBuySol, 0.1, 0.5, 1];
+/** Pilihan cepat jumlah pembelian awal, dalam SOL. 0 = tidak beli apa-apa. */
+const DEV_BUY_PRESETS = [0, 0.1, 0.5, 1];
 
 /** Membaca angka pembelian awal. null = tidak valid. */
 function parseDevBuy(value: string): number | null {
@@ -356,13 +356,13 @@ function FormStep({
                   : "border-line text-muted hover:border-line-hover hover:text-ink"
               }`}
             >
-              {amount === LAUNCH.defaultDevBuySol ? "none" : amount}
+              {amount === 0 ? "none" : amount}
             </button>
           ))}
         </div>
         <p className={`text-[11px] ${devBuyValid ? "text-dim" : "text-warn"}`}>
           {devBuyValid
-            ? "How much of your own coin you buy at launch. pump.fun needs at least a tiny amount, so “none” still buys the minimum."
+            ? "How much of your own coin you buy at launch. Leave it at none and you only pay the network cost of creating the coin."
             : `Enter an amount between ${LAUNCH.minDevBuySol} and ${LAUNCH.maxDevBuySol} SOL.`}
         </p>
       </div>

@@ -14,9 +14,12 @@ import { inspectCreateTransaction, type CreateTransactionReport } from "./verify
  * Pintu masuk fitur "Serve" untuk seluruh aplikasi.
  *
  * Kode fitur cukup memanggil prepareCreateTransaction(). Provider dipilih lewat env:
- *   LAUNCH_PROVIDER=pumpfun     (default) — API RESMI pump.fun, mainnet, bayar SOL asli
- *   LAUNCH_PROVIDER=pumpportal            — pihak ketiga, cadangan kalau API resmi bermasalah
+ *   LAUNCH_PROVIDER=pumpportal  (default) — PumpPortal Local, mainnet. Pembelian awal boleh 0.
+ *   LAUNCH_PROVIDER=pumpfun               — API resmi pump.fun. Pembelian awal WAJIB di atas 0.
  *   LAUNCH_PROVIDER=devnet                — token latihan di devnet, gratis, untuk testing
+ *
+ * Mode Lightning PumpPortal sengaja tidak dipakai: mode itu mengharuskan menitipkan
+ * private key ke pihak lain. Di sini user selalu menandatangani di wallet sendiri.
  *
  * Menambah cara lain (misalnya SDK on-chain pump.fun):
  *   1. Buat src/lib/launch/providers/pumpsdk.ts yang mengekspor LaunchProvider.
@@ -24,11 +27,11 @@ import { inspectCreateTransaction, type CreateTransactionReport } from "./verify
  * Kode fitur tidak perlu diubah.
  */
 
-const DEFAULT_PROVIDER = "pumpfun";
+const DEFAULT_PROVIDER = "pumpportal";
 
 const PROVIDERS = new Map<string, LaunchProvider>([
-  [pumpFunProvider.name, pumpFunProvider],
   [pumpPortalProvider.name, pumpPortalProvider],
+  [pumpFunProvider.name, pumpFunProvider],
   [devnetProvider.name, devnetProvider],
 ]);
 

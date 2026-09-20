@@ -17,12 +17,15 @@ export const LAUNCH = {
    * Pembelian awal oleh pembuat koin, dalam SOL. Dia langsung memegang koinnya sendiri.
    * User yang menentukan jumlahnya di layar Serve.
    *
-   * Tidak boleh 0: API resmi pump.fun menolaknya ("solLamports must be > 0").
-   * Bawaannya sengaja kecil supaya hampir tidak terasa — dari 0,0001 SOL,
-   * fee perdagangan pump.fun (0,95%) cuma sekitar 0,000001 SOL.
+   * Bawaannya 0 = tidak membeli apa-apa. Dengan PumpPortal, 0 berarti tidak ada
+   * instruksi fee sama sekali di transaksinya (sudah dibuktikan dengan membandingkan
+   * transaksi dev buy 0 dan 0,1 SOL), jadi potongan 0,5% mereka juga nol.
+   *
+   * Catatan: provider "pumpfun" (API resmi) menolak 0 dan akan memberi pesan error
+   * yang jelas. Angka ini hanya cocok untuk provider yang menerima 0.
    */
-  defaultDevBuySol: 0.0001,
-  minDevBuySol: 0.0001,
+  defaultDevBuySol: 0,
+  minDevBuySol: 0,
   /** Batas atas, penjaga supaya salah ketik tidak berakibat fatal. */
   maxDevBuySol: 10,
   /** Toleransi selisih harga untuk pembelian awal, dalam persen. Tidak terpakai kalau devBuySol = 0. */
@@ -65,8 +68,8 @@ if (LAUNCH.nameMaxLength < 1 || LAUNCH.nameMaxLength > 32) {
 if (LAUNCH.tickerMaxLength > 10) {
   throw new Error("src/config/launch.ts: tickerMaxLength maksimal 10 (batas on-chain).");
 }
-if (!Number.isFinite(LAUNCH.minDevBuySol) || LAUNCH.minDevBuySol <= 0) {
-  throw new Error("src/config/launch.ts: minDevBuySol harus lebih dari 0 (API resmi pump.fun menolak 0).");
+if (!Number.isFinite(LAUNCH.minDevBuySol) || LAUNCH.minDevBuySol < 0) {
+  throw new Error("src/config/launch.ts: minDevBuySol tidak boleh negatif.");
 }
 if (LAUNCH.defaultDevBuySol < LAUNCH.minDevBuySol || LAUNCH.defaultDevBuySol > LAUNCH.maxDevBuySol) {
   throw new Error("src/config/launch.ts: defaultDevBuySol harus antara minDevBuySol dan maxDevBuySol.");

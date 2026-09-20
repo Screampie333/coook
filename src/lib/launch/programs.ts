@@ -19,6 +19,13 @@ export const PROGRAMS = {
   metaplexMetadata: "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
   /** Mengatur biaya prioritas transaksi. */
   computeBudget: "ComputeBudget111111111111111111111111111111",
+  /**
+   * Pemungut fee PumpPortal (0,5% dari pembelian awal).
+   * Hanya muncul di transaksi PumpPortal yang pembelian awalnya lebih dari 0 —
+   * sudah saya buktikan dengan membandingkan transaksi dev buy 0 dan 0,1 SOL.
+   * Alamatnya dicek ke mainnet: ada dan executable.
+   */
+  pumpPortalFee: "FAdo9NCw1ssek6Z6yeWzWjhLVsr8uiCwcWNUnKgzTnHe",
   system: SYSTEM_PROGRAM_ADDRESS as string,
   token: TOKEN_PROGRAM_ADDRESS as string,
   associatedToken: ASSOCIATED_TOKEN_PROGRAM_ADDRESS as string,
@@ -30,6 +37,7 @@ export const PROGRAM_NAMES: Readonly<Record<string, string>> = {
   [PROGRAMS.pumpFun]: "pump.fun",
   [PROGRAMS.metaplexMetadata]: "Metaplex Token Metadata",
   [PROGRAMS.computeBudget]: "Compute Budget",
+  [PROGRAMS.pumpPortalFee]: "PumpPortal fee",
   [PROGRAMS.system]: "System",
   [PROGRAMS.token]: "SPL Token",
   [PROGRAMS.associatedToken]: "Associated Token Account",
