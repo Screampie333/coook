@@ -86,6 +86,44 @@ function deny(status: 401 | 403 | 500, error: string): AuthResult {
 }
 
 /**
+ * Ingatan singkat: userId Privy -> alamat wallet.
+ *
+ * Tanpa ini, SETIAP request yang butuh login memanggil API Privy lewat jaringan
+ * hanya untuk menanyakan hal yang sama berulang kali. Itu memperlambat semua
+ * request, dan siapa pun yang membanjiri satu endpoint bisa menghabiskan jatah
+ * API Privy kita sampai user asli ikut terkunci.
+ *
+ * Kuncinya userId dari token yang SUDAH diverifikasi secara kriptografis,
+ * jadi tidak ada nilai dari browser yang bisa menyentuh cache ini.
+ *
+ * Umurnya sengaja pendek: kalau user mengganti wallet di Privy, perubahannya
+ * ikut terbaca paling lama setelah TTL ini lewat.
+ */
+const WALLET_CACHE_TTL_MS = 5 * 60 * 1000;
+const WALLET_CACHE_MAX_ENTRIES = 5_000;
+
+const walletCache = new Map<string, { walletAddress: string; expiresAt: number }>();
+
+function getCachedWallet(userId: string): string | null {
+  const hit = walletCache.get(userId);
+  if (!hit) return null;
+  if (hit.expiresAt <= Date.now()) {
+    walletCache.delete(userId);
+    return null;
+  }
+  return hit.walletAddress;
+}
+
+function cacheWallet(userId: string, walletAddress: string) {
+  // Map mengingat urutan penyisipan, jadi entri terlama ada di depan.
+  if (walletCache.size >= WALLET_CACHE_MAX_ENTRIES) {
+    const oldest = walletCache.keys().next().value;
+    if (oldest !== undefined) walletCache.delete(oldest);
+  }
+  walletCache.set(userId, { walletAddress, expiresAt: Date.now() + WALLET_CACHE_TTL_MS });
+}
+
+/**
  * Pakai di awal setiap API route yang butuh login:
  *
  *   const auth = await requireUser(request);
@@ -113,10 +151,18 @@ export async function requireUser(request: Request): Promise<AuthResult> {
     return deny(401, "Unauthorized");
   }
 
+  // Sudah pernah ditanyakan baru-baru ini? Lewati panggilan jaringan ke Privy.
+  const cached = getCachedWallet(userId);
+  if (cached) return { ok: true, user: { userId, walletAddress: cached } };
+
   try {
     const user = await privy.users()._get(userId);
     const walletAddress = findSolanaWallet(user.linked_accounts);
+    // Kegagalan sengaja TIDAK di-cache: user yang baru menghubungkan wallet
+    // tidak perlu menunggu TTL habis dulu.
     if (!walletAddress) return deny(403, "No Solana wallet linked to this account");
+
+    cacheWallet(userId, walletAddress);
     return { ok: true, user: { userId, walletAddress } };
   } catch (error) {
     console.error("[privy-server] Failed to load Privy user", error);
