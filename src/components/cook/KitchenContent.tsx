@@ -142,7 +142,6 @@ export function KitchenContent() {
           onCustomCaptionChange={setCustomCaption}
           onClose={() => setEditingId(null)}
           fileStem={memeFileStem(editing.createdAt)}
-          loreName={editing.loreName}
         />
       </div>
     );

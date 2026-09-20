@@ -13,8 +13,6 @@ export type MemeSummary = {
   captionIndex: number | null;
   /** Ide user. Hanya diisi untuk pemilik meme; di galeri publik selalu null. */
   idea: string | null;
-  loreId: string | null;
-  loreName: string | null;
   walletAddress: string;
   createdAt: string;
 };

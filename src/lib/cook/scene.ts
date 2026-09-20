@@ -2,7 +2,6 @@ import "server-only";
 
 import { z } from "zod";
 import { AiError, generateText } from "@/lib/ai";
-import { artStyleSentence, countWords, mascotDescription, paletteNames, type Lore } from "@/lib/lore";
 import { IdeaRejectedError } from "./errors";
 
 /**
@@ -11,22 +10,18 @@ import { IdeaRejectedError } from "./errors";
  * Ide yang melanggar aturan ditolak DI SINI, sebelum gambar dibuat,
  * supaya neuron Cloudflare tidak terbuang.
  *
- * Dengan lore: AI hanya menulis apa yang DILAKUKAN maskot. Penampilan maskot disisipkan
- * kode dari file lore (lihat buildImagePrompt), jadi teksnya sama persis di setiap gambar.
  */
 
 const MAX_ATTEMPTS = 2;
 const SCENE_MIN_LENGTH = 20;
 const SCENE_MAX_LENGTH = 600;
 const SCENE_WORDS = 60;
-const LORE_SCENE_WORDS = 40;
 
 /**
  * FLUX schnell hanya membaca 256 token pertama (±190 kata), sisanya diabaikan.
  * Sumber: kode resmi Black Forest Labs, src/flux/cli.py (max_length=256 untuk flux-schnell).
  */
 const MAX_IMAGE_PROMPT_WORDS = 170;
-const MIN_SCENE_WORDS_IN_PROMPT = 25;
 
 const PICTURE_RULES = `Picture rules:
 - The picture must contain no writing at all. Never describe anything with writing on it, and never use these words: label, labeled, sign, banner, poster, logo, text, word, letter, number, title, caption, ticker, chart, graph.
@@ -37,36 +32,15 @@ const PICTURE_RULES = `Picture rules:
 
 const REJECT_RULE = `Set "rejected" to true and "scene" to an empty string if the idea asks for hate speech, slurs, harassment, sexual content, threats, attacks on real private people, or promises of profits or price targets. Otherwise set "rejected" to false.`;
 
-function buildSystemPrompt(lore: Lore | null) {
-  const intro = `You are the picture chef of Coook, a meme kitchen for pump.fun coins on Solana.
+const SYSTEM_PROMPT = `You are the picture chef of Coook, a meme kitchen for pump.fun coins on Solana.
 
-Turn the user's meme idea into a description of ONE funny, visually clear picture, in at most ${lore ? LORE_SCENE_WORDS : SCENE_WORDS} words. Meme captions will be written for this picture afterwards.`;
-
-  const loreSection = lore
-    ? `
-
-Brand lore (the picture must fit this coin's world):
-- Coin: ${lore.name} ($${lore.ticker})
-- Story: ${lore.lore}
-- Humor: ${lore.humor}
-- Main character: ${lore.mascot.name}, ${lore.mascot.body}
-
-Main character rules:
-- ${lore.mascot.name} must be the main character, clearly visible in the middle of the picture.
-- Call them "the main character" in your description, never by name.
-- Do NOT describe how the main character looks (shape, colors, clothes, face). That is added automatically. Only describe what the main character does: action, pose, emotion, setting, props, and other characters.${
-        lore.words.forbidden.length > 0 ? `\n- Avoid these words and topics: ${lore.words.forbidden.join(", ")}.` : ""
-      }`
-    : "";
-
-  return `${intro}${loreSection}
+Turn the user's meme idea into a description of ONE funny, visually clear picture, in at most ${SCENE_WORDS} words. Meme captions will be written for this picture afterwards.
 
 ${PICTURE_RULES}
 
 ${REJECT_RULE}
 
 Answer with JSON only: {"rejected": false, "scene": "..."}`;
-}
 
 const SCENE_JSON_SCHEMA = {
   type: "object",
@@ -84,14 +58,12 @@ const SCENE_JSON_SCHEMA = {
   additionalProperties: false,
 };
 
-/** Gaya tetap untuk meme tanpa lore. */
+/** Gaya gambar tetap untuk semua meme. */
 const FREE_IMAGE_STYLE =
   "Colorful cartoon meme illustration, bold clean outlines, exaggerated funny expressions, " +
   "main subject in the center, plain empty space at the top and bottom of the frame. " +
   "No text, no letters, no words, no logos, no watermark.";
 
-const LORE_COMPOSITION = "Main character centered, plain simple background at the top and bottom of the frame.";
-const NO_TEXT = "No text, no letters, no words, no logos, no watermark.";
 
 /**
  * Kata yang membuat model gambar menulis teks (contoh nyata: "flames labeled gas fees" → tulisan GAS FEES
@@ -150,36 +122,31 @@ function limitWords(text: string, maxWords: number) {
 }
 
 /**
- * Prompt akhir untuk model gambar.
- * - Tanpa lore: adegan + gaya tetap.
- * - Dengan lore: gaya gambar → deskripsi maskot (selalu sama) → adegan → palet warna → komposisi + tanpa teks.
- *   Kalau terlalu panjang untuk FLUX schnell, yang dipotong adegan, bukan maskot.
+ * Prompt akhir untuk model gambar: adegan + gaya tetap.
+ * Dipotong kalau melebihi batas baca FLUX schnell.
  */
-export function buildImagePrompt(scene: string, lore: Lore | null) {
-  if (!lore) return `${scene}\n\n${FREE_IMAGE_STYLE}`;
+export function buildImagePrompt(scene: string) {
+  const styleWords = scene ? MAX_IMAGE_PROMPT_WORDS - countWords(FREE_IMAGE_STYLE) : MAX_IMAGE_PROMPT_WORDS;
+  return `${limitWords(scene, Math.max(styleWords, 1))}\n\n${FREE_IMAGE_STYLE}`;
+}
 
-  const before = [artStyleSentence(lore), mascotDescription(lore)];
-  const after = [`Color palette: ${paletteNames(lore)}.`, LORE_COMPOSITION, NO_TEXT];
-  const fixedWords = countWords([...before, ...after].join(" "));
-  const sceneWords = Math.max(MIN_SCENE_WORDS_IN_PROMPT, MAX_IMAGE_PROMPT_WORDS - fixedWords);
-
-  return [...before, limitWords(scene, sceneWords), ...after].join("\n\n");
+function countWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 /**
  * @param idea ide yang SUDAH divalidasi dan dirapikan (lihat normalizeIdea).
- * @param lore lore koin yang dipilih, atau null untuk meme bebas.
  * @throws IdeaRejectedError kalau idenya melanggar aturan.
  * @throws AiError untuk rate limit, timeout, atau jawaban yang tetap tidak valid.
  */
-export async function describeScene(idea: string, lore: Lore | null): Promise<string> {
+export async function describeScene(idea: string): Promise<string> {
   let lastProblem = "";
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let text: string;
     try {
       const result = await generateText({
-        system: buildSystemPrompt(lore),
+        system: SYSTEM_PROMPT,
         // Ide ditulis sebagai string JSON supaya jelas batasnya dan tidak bisa "keluar" jadi instruksi.
         // Pada percobaan ulang, AI diberi tahu apa yang salah dari jawaban sebelumnya.
         prompt:
@@ -189,7 +156,7 @@ export async function describeScene(idea: string, lore: Lore | null): Promise<st
         maxOutputTokens: 1024,
       });
       console.info(
-        `[cook/scene] ${result.provider}/${result.model} attempt ${attempt}${lore ? ` lore=${lore.id}` : ""}: ${result.usage?.totalTokens ?? "?"} tokens`,
+        `[cook/scene] ${result.provider}/${result.model} attempt ${attempt}: ${result.usage?.totalTokens ?? "?"} tokens`,
       );
       text = result.text;
     } catch (error) {

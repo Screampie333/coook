@@ -11,13 +11,12 @@ import { insertMeme } from "@/lib/db/memes";
 import { deleteMemeImage, memeImagePath, memeImageUrl, uploadMemeImage } from "@/lib/db/storage";
 import { getImageQuota, refundImage, reserveImage } from "@/lib/db/usage";
 import { ensureUser } from "@/lib/db/users";
-import { getLore, type Lore } from "@/lib/lore";
 import { requireUser } from "@/lib/privy-server";
 import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 /**
  * POST /api/cook
- * Body: { "idea": "...", "loreId": "coook" | null }
+ * Body: { "idea": "..." }
  * Hasil: {
  *   "meme": { "id": "...", "imageUrl": "https://...", "captions": ["...", "...", "..."] },
  *   "quota": {...}
@@ -40,8 +39,6 @@ const bodySchema = z.object({
         .min(1, "Type an idea first.")
         .max(IDEA_MAX_LENGTH, `Keep your idea under ${IDEA_MAX_LENGTH} characters.`),
     ),
-  /** Kosong/null = meme bebas tanpa lore. Isi lore selalu diambil server dari database. */
-  loreId: z.string("Pick a lore from the list.").max(64).nullish(),
 });
 
 export async function POST(request: Request) {
@@ -69,17 +66,9 @@ export async function POST(request: Request) {
     return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
   }
 
-  // 3. Siapkan user + lore.
-  let lore: Lore | null = null;
+  // 3. Siapkan user.
   try {
     await ensureUser(wallet, auth.user.userId);
-
-    if (parsed.data.loreId) {
-      lore = await getLore(parsed.data.loreId);
-      if (!lore) {
-        return errorResponse(400, "unknown_lore", "That lore isn't on the menu anymore. Pick another one.");
-      }
-    }
 
     // 4. Kuota gambar gratis hari ini sudah habis? Tolak langsung tanpa memakai token AI teks.
     if (isImageProviderExhausted()) {
@@ -111,7 +100,7 @@ export async function POST(request: Request) {
   let uploadedPath: string | null = null;
 
   try {
-    const { picture, captions } = await cookMeme(parsed.data.idea, lore);
+    const { picture, captions } = await cookMeme(parsed.data.idea);
 
     const path = memeImagePath(wallet, memeId, picture.mimeType);
     await uploadMemeImage(path, picture.data, picture.mimeType);
@@ -121,14 +110,13 @@ export async function POST(request: Request) {
       id: memeId,
       walletAddress: wallet,
       idea: parsed.data.idea,
-      loreId: lore?.id ?? null,
       imagePath: path,
       captions,
     });
 
     return NextResponse.json(
       {
-        meme: { id: memeId, imageUrl: memeImageUrl(path), captions, loreId: lore?.id ?? null },
+        meme: { id: memeId, imageUrl: memeImageUrl(path), captions },
         quota: reserved.quota,
       },
       { headers: { "Cache-Control": "no-store" } },

@@ -8,22 +8,19 @@ import { memeImageUrl } from "./storage";
 /** Jumlah meme per halaman galeri. */
 export const MEMES_PAGE_SIZE = 24;
 
-const SELECT_COLUMNS = "id, wallet_address, idea, lore_id, image_path, captions, caption_index, created_at, lores(name)";
+const SELECT_COLUMNS = "id, wallet_address, idea, image_path, captions, caption_index, created_at";
 
 type MemeRow = {
   id: string;
   wallet_address: string;
   idea: string;
-  lore_id: string | null;
   image_path: string;
   captions: string[] | null;
   caption_index: number | null;
   created_at: string;
-  lores: { name: string } | { name: string }[] | null;
 };
 
 function toSummary(row: MemeRow, options: { withIdea: boolean }): MemeSummary {
-  const lore = Array.isArray(row.lores) ? row.lores[0] : row.lores;
   return {
     id: row.id,
     imageUrl: memeImageUrl(row.image_path),
@@ -31,8 +28,6 @@ function toSummary(row: MemeRow, options: { withIdea: boolean }): MemeSummary {
     captionIndex: row.caption_index,
     // Ide user hanya ditampilkan ke pemiliknya sendiri.
     idea: options.withIdea ? row.idea : null,
-    loreId: row.lore_id,
-    loreName: lore?.name ?? null,
     walletAddress: row.wallet_address,
     createdAt: row.created_at,
   };
@@ -42,7 +37,6 @@ export async function insertMeme(meme: {
   id: string;
   walletAddress: string;
   idea: string;
-  loreId: string | null;
   imagePath: string;
   captions: string[];
 }) {
@@ -50,7 +44,6 @@ export async function insertMeme(meme: {
     id: meme.id,
     wallet_address: meme.walletAddress,
     idea: meme.idea,
-    lore_id: meme.loreId,
     image_path: meme.imagePath,
     captions: meme.captions,
   });
@@ -58,9 +51,8 @@ export async function insertMeme(meme: {
   if (error) throwDatabaseError("could not save the meme", error);
 }
 
-/** Galeri publik (/menu). `loreId`: "all" | "none" | id lore. */
+/** Galeri publik (/menu). */
 export async function listRecentMemes(options: {
-  loreId?: string;
   before?: string;
   limit?: number;
 }): Promise<MemeSummary[]> {
@@ -71,8 +63,6 @@ export async function listRecentMemes(options: {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (options.loreId === "none") query = query.is("lore_id", null);
-  else if (options.loreId && options.loreId !== "all") query = query.eq("lore_id", options.loreId);
   if (options.before) query = query.lt("created_at", options.before);
 
   const { data, error } = await query;
@@ -105,7 +95,6 @@ export type MemeForLaunch = {
   imagePath: string;
   captions: string[];
   idea: string;
-  loreId: string | null;
 };
 
 /**
@@ -115,7 +104,7 @@ export type MemeForLaunch = {
 export async function getMemeForOwner(memeId: string, walletAddress: string): Promise<MemeForLaunch | null> {
   const { data, error } = await getSupabase()
     .from("memes")
-    .select("id, image_path, captions, idea, lore_id")
+    .select("id, image_path, captions, idea")
     .eq("id", memeId)
     .eq("wallet_address", walletAddress)
     .maybeSingle();
@@ -123,13 +112,12 @@ export async function getMemeForOwner(memeId: string, walletAddress: string): Pr
   if (error) throwDatabaseError("could not read that meme", error);
   if (!data) return null;
 
-  const row = data as unknown as Pick<MemeRow, "id" | "image_path" | "captions" | "idea" | "lore_id">;
+  const row = data as unknown as Pick<MemeRow, "id" | "image_path" | "captions" | "idea">;
   return {
     id: row.id,
     imagePath: row.image_path,
     captions: row.captions ?? [],
     idea: row.idea,
-    loreId: row.lore_id,
   };
 }
 

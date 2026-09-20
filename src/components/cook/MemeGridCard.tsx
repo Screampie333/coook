@@ -33,11 +33,6 @@ export function MemeGridCard({ meme, action }: { meme: MemeSummary; action?: Rea
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-xs">
-        {meme.loreName ? (
-          <span className="rounded-full bg-accent-soft px-2 py-0.5 font-bold text-accent">{meme.loreName}</span>
-        ) : (
-          <span className="rounded-full border border-line px-2 py-0.5 text-dim">Free meme</span>
-        )}
         <span className="font-mono text-dim" title={meme.walletAddress}>
           {shortenAddress(meme.walletAddress)}
         </span>

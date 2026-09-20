@@ -38,8 +38,6 @@ type MemeCardProps = {
   hint?: string;
   /** Awalan nama file download, misalnya "coook-meme-2026-09-17-143005". */
   fileStem: string;
-  /** Nama lore yang dipakai untuk hasil ini, atau null untuk meme bebas. */
-  loreName: string | null;
 };
 
 /** Jeda setelah berhenti mengetik sebelum preview digambar ulang. */
@@ -63,7 +61,6 @@ export function MemeCard({
   onClose,
   hint,
   fileStem,
-  loreName,
 }: MemeCardProps) {
   const groupName = useId();
   const [serving, setServing] = useState(false);
@@ -137,7 +134,7 @@ export function MemeCard({
       <Card
         icon={ImageIcon}
         title="Your meme"
-        right={cooking ? "Cooking…" : loreName ? `${loreName} lore` : "Free meme"}
+        right={cooking ? "Cooking…" : undefined}
       >
         <div className="@container">
           <div className="grid gap-5 p-4 @2xl:grid-cols-2">
@@ -285,7 +282,6 @@ export function MemeCard({
           // Gambar yang sedang dilihat user, caption-nya sudah menempel.
           picture={shownImage ?? result.picture}
           caption={withCaption ? captionText : ""}
-          suggestedName={loreName ?? undefined}
           onClose={() => setServing(false)}
         />
       )}

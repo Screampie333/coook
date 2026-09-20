@@ -6,30 +6,18 @@ import { Card, CardEmpty } from "@/components/ui/Card";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { listRecentMemes, MEMES_PAGE_SIZE } from "@/lib/db/memes";
-import { listLoreOptions } from "@/lib/lore";
 import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Menu — Coook",
 };
 
-type MenuSearchParams = { lore?: string; before?: string };
+type MenuSearchParams = { before?: string };
 
 export default async function MenuPage({ searchParams }: { searchParams: Promise<MenuSearchParams> }) {
   const params = await searchParams;
-  const loreFilter = params.lore ?? "all";
-
-  const [lores, memes] = await Promise.all([
-    listLoreOptions(),
-    isDatabaseConfigured() ? listRecentMemes({ loreId: loreFilter, before: params.before }) : Promise.resolve([]),
-  ]);
-
+  const memes = isDatabaseConfigured() ? await listRecentMemes({ before: params.before }) : [];
   const olderThan = memes.length === MEMES_PAGE_SIZE ? memes[memes.length - 1]?.createdAt : null;
-  const filters = [
-    { id: "all", label: "All" },
-    { id: "none", label: "Free memes" },
-    ...lores.map((lore) => ({ id: lore.id, label: lore.name })),
-  ];
 
   return (
     <>
@@ -43,27 +31,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
       />
 
       <Block>
-        <SectionTitle title="Fresh from the kitchen" sub="Pick a lore to see only its memes." />
-
-        <div className="flex flex-wrap gap-2">
-          {filters.map((filter) => {
-            const active = filter.id === loreFilter;
-            return (
-              <Link
-                key={filter.id}
-                href={filter.id === "all" ? "/menu" : `/menu?lore=${filter.id}`}
-                aria-current={active ? "page" : undefined}
-                className={`rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-                  active
-                    ? "border-accent bg-accent-soft text-accent"
-                    : "border-line text-muted hover:border-line-hover hover:text-ink"
-                }`}
-              >
-                {filter.label}
-              </Link>
-            );
-          })}
-        </div>
+        <SectionTitle title="Fresh from the kitchen" sub="Every meme the kitchen has served, newest first." />
 
         {memes.length === 0 ? (
           <Card icon={UtensilsCrossed} title="Nothing served yet">
@@ -85,7 +53,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             {params.before && (
               <Link
-                href={loreFilter === "all" ? "/menu" : `/menu?lore=${loreFilter}`}
+                href="/menu"
                 className="rounded-full border border-line px-5 py-2.5 text-sm font-bold text-ink hover:border-line-hover"
               >
                 Newest
@@ -93,7 +61,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
             )}
             {olderThan && (
               <Link
-                href={`/menu?${new URLSearchParams({ ...(loreFilter !== "all" ? { lore: loreFilter } : {}), before: olderThan }).toString()}`}
+                href={`/menu?${new URLSearchParams({ before: olderThan }).toString()}`}
                 className="rounded-full border border-line px-5 py-2.5 text-sm font-bold text-ink hover:border-line-hover"
               >
                 Older memes
