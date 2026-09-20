@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
  * File ini hanya boleh dipakai di server (dijaga oleh import "server-only").
  *
  * Alur:
- * 1. Ambil access token dari header Authorization (atau cookie privy-token).
+ * 1. Ambil access token dari header Authorization (TIDAK PERNAH dari cookie, lihat getAccessToken).
  * 2. Verifikasi token dengan Privy -> dapat user_id yang terpercaya.
  * 3. Ambil data user dari Privy memakai PRIVY_APP_SECRET.
  * 4. Cari wallet Solana eksternal milik user itu.
@@ -42,17 +42,28 @@ export type AuthResult =
   | { ok: true; user: AuthedUser }
   | { ok: false; response: NextResponse };
 
+/**
+ * Token HANYA diterima dari header Authorization, tidak pernah dari cookie.
+ *
+ * Ini yang menutup CSRF. Privy ikut menulis cookie berisi token yang sama, dan
+ * browser mengirim cookie otomatis ke mana pun — termasuk saat situs jahat
+ * memanggil API kita dari halaman mereka. Kalau server menerima token dari cookie,
+ * situs itu bisa menjalankan aksi atas nama user yang sedang login: menghabiskan
+ * jatah meme hariannya, atau memicu pembuatan koin yang menulis permanen ke IPFS.
+ *
+ * Header Authorization tidak bisa dipasang oleh situs lain pada permintaan lintas
+ * situs tanpa izin CORS dari kita, dan isinya tidak bisa dibaca dari halaman kita.
+ * Jadi selama token hanya datang dari header, serangan itu tidak jalan.
+ *
+ * Catatan: jangan tergoda menambahkan pembacaan cookie "sebagai cadangan".
+ * Seluruh kode browser sudah memakai authFetch(), yang selalu memasang header ini.
+ */
 function getAccessToken(request: Request): string | null {
   const header = request.headers.get("authorization");
-  if (header?.startsWith("Bearer ")) {
-    const token = header.slice("Bearer ".length).trim();
-    if (token) return token;
-  }
+  if (!header?.startsWith("Bearer ")) return null;
 
-  // Cadangan kalau nanti Privy diset memakai HTTP-only cookie.
-  const cookie = request.headers.get("cookie");
-  const match = cookie?.match(/(?:^|;\s*)privy-token=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  const token = header.slice("Bearer ".length).trim();
+  return token || null;
 }
 
 function findSolanaWallet(accounts: LinkedAccount[]): string | null {
