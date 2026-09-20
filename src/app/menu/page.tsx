@@ -5,7 +5,7 @@ import { MemeGridCard } from "@/components/cook/MemeGridCard";
 import { Card, CardEmpty } from "@/components/ui/Card";
 import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { listRecentMemes, MEMES_PAGE_SIZE } from "@/lib/db/memes";
+import { listRecentMemes, MEMES_PAGE_SIZE, parseCursor } from "@/lib/db/memes";
 import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,7 +16,9 @@ type MenuSearchParams = { before?: string };
 
 export default async function MenuPage({ searchParams }: { searchParams: Promise<MenuSearchParams> }) {
   const params = await searchParams;
-  const memes = isDatabaseConfigured() ? await listRecentMemes({ before: params.before }) : [];
+  // Halaman publik: penanda yang tidak valid cukup diabaikan, tampilkan halaman pertama.
+  const before = parseCursor(params.before) ?? undefined;
+  const memes = isDatabaseConfigured() ? await listRecentMemes({ before }) : [];
   const olderThan = memes.length === MEMES_PAGE_SIZE ? memes[memes.length - 1]?.createdAt : null;
 
   return (
@@ -36,7 +38,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
         {memes.length === 0 ? (
           <Card icon={UtensilsCrossed} title="Nothing served yet">
             <CardEmpty>
-              {params.before
+              {before
                 ? "That's the whole menu."
                 : "No memes here yet. Cook the first one on the Cook page."}
             </CardEmpty>
@@ -49,9 +51,9 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
           </div>
         )}
 
-        {(olderThan || params.before) && (
+        {(olderThan || before) && (
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {params.before && (
+            {before && (
               <Link
                 href="/menu"
                 className="rounded-full border border-line px-5 py-2.5 text-sm font-bold text-ink hover:border-line-hover"

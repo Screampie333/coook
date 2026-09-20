@@ -8,6 +8,24 @@ import { memeImageUrl } from "./storage";
 /** Jumlah meme per halaman galeri. */
 export const MEMES_PAGE_SIZE = 24;
 
+/**
+ * Memeriksa penanda halaman ("muat yang lebih lama") sebelum masuk ke database.
+ *
+ * Nilainya datang mentah dari URL. Tanpa pemeriksaan ini, teks sembarang bikin
+ * Postgres menolak query-nya, user dapat error 503 yang membingungkan, dan
+ * seluruh isi kiriman ikut tertulis ke log server.
+ *
+ * @returns waktu ISO yang sudah dirapikan, atau null kalau tidak dikirim/tidak valid.
+ */
+export function parseCursor(value: string | null | undefined): string | null {
+  // Waktu ISO paling panjang sekitar 30 karakter; sisanya pasti bukan waktu.
+  if (typeof value !== "string" || value.length === 0 || value.length > 40) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 const SELECT_COLUMNS = "id, wallet_address, idea, image_path, captions, caption_index, created_at";
 
 type MemeRow = {

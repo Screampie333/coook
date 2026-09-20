@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { aiErrorResponse, errorResponse } from "@/lib/cook/api-errors";
 import { listWalletLaunches } from "@/lib/db/launches";
-import { listWalletMemes, MEMES_PAGE_SIZE } from "@/lib/db/memes";
+import { listWalletMemes, MEMES_PAGE_SIZE, parseCursor } from "@/lib/db/memes";
 import { requireUser } from "@/lib/privy-server";
 import { isDatabaseConfigured } from "@/lib/supabase/server";
 
@@ -19,7 +19,13 @@ export async function GET(request: Request) {
     return errorResponse(500, "server_error", "The kitchen isn't set up yet. Try again later.");
   }
 
-  const before = new URL(request.url).searchParams.get("before") ?? undefined;
+  // Penanda halaman datang mentah dari URL, jadi diperiksa dulu.
+  const rawBefore = new URL(request.url).searchParams.get("before");
+  const before = parseCursor(rawBefore) ?? undefined;
+  if (rawBefore !== null && before === undefined) {
+    return errorResponse(400, "invalid_input", "That page marker doesn't look right.");
+  }
+
   const wallet = auth.user.walletAddress;
 
   try {

@@ -66,6 +66,33 @@ export async function hasConfirmedLaunch(memeId: string): Promise<boolean> {
   return data !== null;
 }
 
+/**
+ * Umur maksimal percobaan yang masih masuk akal. Blockhash Solana hanya hidup
+ * sekitar satu menit, jadi apa pun yang lebih tua dari ini sudah pasti mati.
+ */
+const STALE_PENDING_MS = 5 * 60 * 1000;
+
+/**
+ * Menutup percobaan yang ditinggalkan user, supaya tabel tidak menumpuk baris
+ * "pending" yang tidak akan pernah selesai. Tidak pernah melempar error:
+ * kegagalan bersih-bersih tidak boleh menggagalkan pembuatan koin.
+ */
+async function expireStalePending(walletAddress: string) {
+  const cutoff = new Date(Date.now() - STALE_PENDING_MS).toISOString();
+  try {
+    const { error } = await getSupabase()
+      .from("launches")
+      .update({ status: "failed", updated_at: new Date().toISOString() })
+      .eq("wallet_address", walletAddress)
+      .eq("status", "pending")
+      .lt("created_at", cutoff);
+
+    if (error) console.error("[db] could not expire stale coin attempts:", error.message);
+  } catch (error) {
+    console.error("[db] could not expire stale coin attempts:", error);
+  }
+}
+
 export type PendingLaunch = {
   id: string;
   mintAddress: string;
@@ -97,6 +124,11 @@ export async function insertPendingLaunch(launch: {
     .eq("status", "pending");
 
   if (cleanupError) throwDatabaseError("could not tidy up older attempts", cleanupError);
+
+  // Percobaan yang ditinggalkan user (menutup tab sebelum tanda tangan) tidak pernah
+  // selesai sendiri dan akan menumpuk selamanya. Blockhash-nya sudah lama mati, jadi
+  // yang lebih tua dari batas ini pasti tidak bisa dipakai lagi.
+  await expireStalePending(launch.walletAddress);
 
   const { data, error } = await getSupabase()
     .from("launches")
@@ -134,12 +166,18 @@ export async function insertPendingLaunch(launch: {
  * Filter wallet_address memastikan user hanya bisa melanjutkan percobaannya sendiri.
  */
 export async function findPendingLaunch(mintAddress: string, walletAddress: string): Promise<PendingLaunch | null> {
+  // Percobaan yang terlalu tua ditolak di sini. Blockhash-nya sudah mati, jadi
+  // transaksinya pasti gagal di jaringan — lebih baik user diberi tahu sekarang
+  // dengan pesan yang jelas daripada error teknis dari Solana.
+  const cutoff = new Date(Date.now() - STALE_PENDING_MS).toISOString();
+
   const { data, error } = await getSupabase()
     .from("launches")
     .select("id, mint_address, meme_id, name, ticker, cluster")
     .eq("mint_address", mintAddress)
     .eq("wallet_address", walletAddress)
     .eq("status", "pending")
+    .gte("created_at", cutoff)
     .maybeSingle();
 
   if (error) throwDatabaseError("could not find the coin attempt", error);
