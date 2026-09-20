@@ -1,5 +1,6 @@
 import "server-only";
 
+import { startOfQuotaDay } from "@/lib/cook/limits";
 import type { LaunchSummary } from "@/lib/cook/meme-types";
 import type { Cluster } from "@/lib/launch/types";
 import { getSupabase } from "@/lib/supabase/server";
@@ -51,6 +52,24 @@ export async function listWalletLaunches(walletAddress: string, limit = 24): Pro
 
   if (error) throwDatabaseError("could not read your coins", error);
   return (data ?? []).map((row) => toSummary(row as unknown as LaunchRow));
+}
+
+/**
+ * Berapa kali wallet ini mencoba membuat koin hari ini (sejak 00:00 WIB).
+ *
+ * Dihitung dari baris launches, apa pun statusnya — yang dibatasi memang
+ * percobaannya, karena setiap percobaan sudah memakai sumber daya kita
+ * (gambar, IPFS permanen, filter isi, PumpPortal, RPC) sebelum user tanda tangan.
+ */
+export async function countAttemptsToday(walletAddress: string): Promise<number> {
+  const { count, error } = await getSupabase()
+    .from("launches")
+    .select("id", { count: "exact", head: true })
+    .eq("wallet_address", walletAddress)
+    .gte("created_at", startOfQuotaDay().toISOString());
+
+  if (error) throwDatabaseError("could not check your coin attempts", error);
+  return count ?? 0;
 }
 
 /** true kalau meme ini sudah pernah jadi koin. Satu meme hanya boleh jadi satu koin. */

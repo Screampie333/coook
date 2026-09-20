@@ -43,6 +43,11 @@ export function nextQuotaReset(now = new Date()) {
   return new Date(nextMidnight - RESET_OFFSET_MS);
 }
 
+/** Awal "hari kuota" yang sedang berjalan, yaitu 00:00 WIB terakhir. */
+export function startOfQuotaDay(now = new Date()) {
+  return new Date(nextQuotaReset(now).getTime() - 24 * 60 * 60 * 1000);
+}
+
 /** Tanggal UTC hari ini. Khusus untuk kuota neuron Cloudflare, yang resetnya 00:00 UTC. */
 export function utcDay(now = new Date()) {
   return now.toISOString().slice(0, 10);

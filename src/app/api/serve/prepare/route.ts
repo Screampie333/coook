@@ -3,8 +3,8 @@ import { z } from "zod";
 import { LAUNCH } from "@/config/launch";
 import { isModerationConfigured } from "@/lib/ai";
 import { errorResponse, launchErrorResponse, setupErrorResponse } from "@/lib/cook/api-errors";
-import { CUSTOM_CAPTION_MAX_LENGTH } from "@/lib/cook/limits";
-import { hasConfirmedLaunch, insertPendingLaunch } from "@/lib/db/launches";
+import { CUSTOM_CAPTION_MAX_LENGTH, nextQuotaReset } from "@/lib/cook/limits";
+import { countAttemptsToday, hasConfirmedLaunch, insertPendingLaunch } from "@/lib/db/launches";
 import { getMemeForOwner } from "@/lib/db/memes";
 import { ensureUser } from "@/lib/db/users";
 import { isIpfsConfigured } from "@/lib/ipfs/pinata";
@@ -135,10 +135,22 @@ export async function POST(request: Request) {
       return errorResponse(409, "already_served", "This meme is already a coin.");
     }
 
-    // 6. Periksa isi SEBELUM apa pun diterbitkan. IPFS dan blockchain tidak bisa ditarik kembali.
+    // 6. Batas percobaan harian. Diperiksa SEBELUM apa pun yang memakai sumber daya:
+    //    langkah berikutnya menerbitkan gambar ke IPFS, dan itu tidak bisa ditarik kembali.
+    const attempts = await countAttemptsToday(wallet);
+    if (attempts >= LAUNCH.dailyAttempts) {
+      return errorResponse(
+        429,
+        "too_many_attempts",
+        `You've started ${LAUNCH.dailyAttempts} coins today. Come back after the daily reset.`,
+        { resetsAt: nextQuotaReset().toISOString() },
+      );
+    }
+
+    // 7. Periksa isi SEBELUM apa pun diterbitkan. IPFS dan blockchain tidak bisa ditarik kembali.
     await assertCoinTextIsAllowed(text);
 
-    // 7. Gambar caption → upload ke IPFS → siapkan dan periksa transaksinya.
+    // 8. Gambar caption → upload ke IPFS → siapkan dan periksa transaksinya.
     const { prepared, metadata } = await buildCoin({
       wallet,
       memeId: meme.id,
@@ -147,7 +159,7 @@ export async function POST(request: Request) {
       devBuySol: parsed.data.devBuySol,
     });
 
-    // 8. Catat percobaannya, supaya saat confirm server tidak perlu percaya kiriman browser.
+    // 9. Catat percobaannya, supaya saat confirm server tidak perlu percaya kiriman browser.
     await insertPendingLaunch({
       mintAddress: prepared.mintAddress,
       memeId: meme.id,

@@ -54,6 +54,22 @@ export const LAUNCH = {
   /** Website yang dicantumkan di metadata koin. */
   websiteUrl: "https://coook.ink",
 
+  /**
+   * Batas percobaan membuat koin per wallet per hari (reset 00:00 WIB, sama dengan Cook).
+   *
+   * Yang dibatasi adalah PERCOBAAN, bukan koin yang jadi. Setiap percobaan menyuruh
+   * server kita menggambar ulang gambar, menerbitkannya ke IPFS (permanen dan tidak
+   * bisa dihapus), memanggil filter isi, PumpPortal, dan RPC — semuanya biaya kita,
+   * sementara user tidak membayar apa pun sampai dia benar-benar tanda tangan.
+   *
+   * Tanpa batas ini, satu wallet bisa memanggilnya tanpa henti sambil mengganti
+   * caption tiap kali, dan setiap kali menambah file baru ke akun Pinata kita.
+   *
+   * Angkanya sengaja longgar: user hanya bisa membuat 3 meme per hari, jadi 20
+   * percobaan berarti masih ada banyak ruang untuk mengulang kalau ada yang gagal.
+   */
+  dailyAttempts: 20,
+
   /** Halaman koin di pump.fun. */
   coinPageUrl: "https://pump.fun/coin/",
 };
@@ -79,4 +95,7 @@ if (LAUNCH.priorityFeeSol < 0 || LAUNCH.priorityFeeSol > 0.05) {
 }
 if (LAUNCH.maxOverheadSol <= 0 || LAUNCH.maxOverheadSol > 1) {
   throw new Error("src/config/launch.ts: maxOverheadSol harus lebih dari 0 dan maksimal 1 SOL.");
+}
+if (!Number.isInteger(LAUNCH.dailyAttempts) || LAUNCH.dailyAttempts < 1) {
+  throw new Error("src/config/launch.ts: dailyAttempts harus bilangan bulat minimal 1.");
 }
