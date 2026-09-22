@@ -7,25 +7,30 @@ type BrandProps = {
 };
 
 /**
- * Logo Coook: Madre si maskot saja, tanpa wordmark.
+ * Logo Coook: maskot Madre + tulisan "coook".
  *
- * Wordmark sengaja tidak dipakai di sini karena nama "coook" sudah muncul
- * di judul halaman dan tab. Versi lengkap (maskot + wordmark) ada di
- * public/images/coook-logo.png kalau suatu saat dibutuhkan.
+ * Tulisannya teks biasa (font Shrikhand, sama dengan wordmark di artwork), bukan gambar,
+ * supaya tetap tajam di layar apa pun dan terbaca pembaca layar.
  *
- * Gambarnya sudah dipotong latar (transparan), jadi menempel rapi di atas
- * warna apa pun. File asli dari desainer ada di folder yang sama.
+ * Catatan ukuran: di lockup asli, tinggi wordmark cuma 0,225x tinggi karakter.
+ * Proporsi itu dibuat untuk tampilan besar — di sidebar hasilnya jadi ~9px dan
+ * tidak terbaca, jadi tulisannya sengaja dibuat lebih besar dari aslinya.
+ * Yang diikuti dari artwork: warna oranye dan posisinya rata tengah terhadap maskot.
  */
 export function Brand({ href, onClick }: BrandProps) {
   const logo = (
-    <Image
-      src="/images/coook-mark.png"
-      alt="Coook"
-      width={540}
-      height={777}
-      priority
-      className="h-10 w-auto"
-    />
+    <span className="flex items-center gap-2">
+      <Image
+        src="/images/coook-mark.png"
+        // Kosong: namanya sudah dibacakan oleh teks di sebelahnya.
+        alt=""
+        width={540}
+        height={777}
+        priority
+        className="h-10 w-auto"
+      />
+      <span className="font-display text-accent text-[25px] leading-none">coook</span>
+    </span>
   );
 
   if (!href) return logo;

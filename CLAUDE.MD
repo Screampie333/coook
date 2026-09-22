@@ -15,7 +15,7 @@ Yang diganti: aksen lime Alphet diganti oranye Coook, background gelap tetap, lo
 
 Jangan copy konten Alphet (gauge, metrics, Robinhood Chain), cukup gaya visual dan komponennya.
 
-Logo yang dipakai: Madre saja (tanpa wordmark), di public/images/coook-mark.png.
+Logo yang dipakai: maskot public/images/coook-mark.png + tulisan "coook" sebagai teks (font Shrikhand).
 Versi lengkap dengan wordmark: public/images/coook-logo.png.
 File asli dari desainer ada di folder yang sama dengan awalan coook-madre-final__.
 Versi yang dipakai aplikasi sudah dipotong latarnya jadi transparan, jangan ditimpa dengan yang asli.
