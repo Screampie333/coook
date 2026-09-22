@@ -9,7 +9,7 @@ export function Hero({ title, lede, children }: HeroProps) {
   return (
     <section className="pt-8.5 pb-7 shell:pt-16 shell:pb-10">
       <Page>
-        <h1 className="max-w-[20ch] text-[clamp(30px,4.4vw,50px)] font-bold">{title}</h1>
+        <h1 className="font-display max-w-[20ch] text-[clamp(30px,4.4vw,50px)] leading-[1.15]">{title}</h1>
         {lede && <p className="mt-4 max-w-[62ch] text-base text-muted">{lede}</p>}
         {children}
       </Page>

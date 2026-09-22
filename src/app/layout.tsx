@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Bungee, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Shrikhand, Space_Grotesk } from "next/font/google";
 import { PrivyProviders } from "@/components/auth/PrivyProviders";
 import { AppShell } from "@/components/shell/AppShell";
 import "./globals.css";
 
-const bungee = Bungee({
-  variable: "--font-bungee",
+// Font wordmark di logo Coook. Dipakai juga untuk judul, supaya seluruh situs
+// terasa satu keluarga dengan logonya.
+const shrikhand = Shrikhand({
+  variable: "--font-shrikhand",
   weight: "400",
   subsets: ["latin"],
 });
@@ -35,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${bungee.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`${shrikhand.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <PrivyProviders>

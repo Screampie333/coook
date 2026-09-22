@@ -41,7 +41,7 @@
 /* Font dari next/font (variabel diset di layout.tsx) */
 @theme inline {
   --font-sans: var(--font-space-grotesk), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-bungee), sans-serif;
+  --font-display: var(--font-shrikhand), cursive;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 

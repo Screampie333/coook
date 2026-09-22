@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type BrandProps = {
@@ -5,19 +6,29 @@ type BrandProps = {
   onClick?: () => void;
 };
 
-/** Logo teks "coook" — tiga huruf o berwarna oranye. */
+/**
+ * Logo Coook: Madre si maskot + wordmark "coook".
+ *
+ * Gambarnya sudah dipotong latar (transparan), jadi menempel rapi di atas
+ * warna apa pun. Sumbernya ada di public/images/ bersama versi aslinya.
+ */
 export function Brand({ href, onClick }: BrandProps) {
-  const word = (
-    <span className="font-display text-[19px] leading-none tracking-[0.02em]">
-      c<span className="text-accent">ooo</span>k
-    </span>
+  const logo = (
+    <Image
+      src="/images/coook-logo.png"
+      alt="Coook"
+      width={2427}
+      height={864}
+      priority
+      className="h-8 w-auto"
+    />
   );
 
-  if (!href) return word;
+  if (!href) return logo;
 
   return (
     <Link href={href} onClick={onClick} aria-label="Coook home" className="flex items-center">
-      {word}
+      {logo}
     </Link>
   );
 }

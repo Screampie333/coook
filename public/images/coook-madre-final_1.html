@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Madre — Maskot Coook</title>
+<style>
+  @font-face { font-family:'Shrikhand'; src:url('fonts/shrikhand-latin-400-normal.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap; }
+  :root { --bg:#F6EFE4; --card:#FFFFFF; --ink:#1A1410; --muted:#6B5E52; --line:#E6DCCD; --accent:#FF6B1A; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#120E0B; --card:#1E1814; --ink:#F6EFE4; --muted:#A89A8C; --line:#2E2620; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:48px 24px; transition: background 0.3s ease; }
+  
+  .header-text { max-width: 1240px; margin: 0 auto 32px auto; }
+  h1 { margin:0 0 8px; font-size:32px; letter-spacing:-0.02em; font-weight: 800; }
+  .sub { color:var(--muted); margin:0; max-width:700px; line-height:1.6; font-size:16px; }
+  
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:24px; max-width:1240px; margin: 0 auto; }
+  
+  .card { 
+    background:var(--card); 
+    border:1px solid var(--line); 
+    border-radius:24px; 
+    overflow:hidden;
+    box-shadow: 0 12px 32px -12px rgba(26, 20, 16, 0.08);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px -16px rgba(26, 20, 16, 0.15);
+    border-color: var(--muted);
+  }
+  @media (prefers-color-scheme: dark) {
+    .card { box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.5); }
+    .card:hover { box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.8); }
+  }
+  
+  .card.wide { grid-column:span 2; }
+  @media (max-width:768px){ .card.wide { grid-column:span 1; } }
+  
+  .box { position:relative; display:flex; align-items:center; justify-content:center; }
+  .box svg { display:block; width:100%; height:auto; }
+  
+  .meta { padding:20px 24px 24px; border-top:1px solid var(--line); }
+  .meta h2 { margin:0 0 8px; font-size:17px; font-weight:700; letter-spacing:-0.01em; }
+  .meta p { margin:0; color:var(--muted); font-size:14px; line-height:1.6; }
+
+  .lockup { background:#1A1410; display:flex; align-items:center; justify-content:center; gap:16px; padding:32px 24px; min-height:300px; }
+  .lockup svg { width:180px; flex:none; }
+  .wm { font-family:'Shrikhand', cursive; font-size:72px; line-height:1; color:#FF6B1A;
+        -webkit-text-stroke:4px #F6EFE4; paint-order:stroke fill; transform:rotate(3deg); filter:url(#roughen); display:block; }
+  .name { font-family:'Shrikhand', cursive; font-size:28px; color:#F6EFE4; letter-spacing:0.04em;
+          transform:rotate(-2deg); display:block; text-align:center; margin-top:-6px; }
+
+  .pal { display:flex; gap:12px; flex-wrap:wrap; margin-top:16px; }
+  .pal div { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); font-family:ui-monospace,monospace; font-weight:500; }
+  .pal i { width:20px; height:20px; border-radius:6px; border:1px solid var(--line); display:block; box-shadow:inset 0 2px 4px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+
+<!-- ============ DEFS ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="roughen" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.06" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  
+  <filter id="sticker" x="-20%" y="-20%" width="140%" height="140%">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="8" result="d"/>
+    <feFlood flood-color="#F6EFE4" result="f"/>
+    <feComposite in="f" in2="d" operator="in" result="outline"/>
+    <feGaussianBlur in="outline" stdDeviation="6" result="blur"/>
+    <feOffset dx="0" dy="8" result="offsetBlur"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="outline"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+
+  <filter id="stickerDark" x="-20%" y="-20%" width="140%" height="140%">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="8" result="d"/>
+    <feFlood flood-color="#1A1410" result="f"/>
+    <feComposite in="f" in2="d" operator="in" result="outline"/>
+    <feGaussianBlur in="outline" stdDeviation="6" result="blur"/>
+    <feOffset dx="0" dy="8" result="offsetBlur"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.25"/></feComponentTransfer>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="outline"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  
+  <clipPath id="avatarClip"><circle cx="200" cy="180" r="130"/></clipPath>
+
+  <!-- ===== LENGAN ===== -->
+  <g id="madre-arms">
+    <g fill="none" stroke-linecap="round">
+      <path d="M128 310 Q100 356 106 398" stroke="#1A1410" stroke-width="42"/>
+      <path d="M272 304 Q310 294 318 256" stroke="#1A1410" stroke-width="42"/>
+      <path d="M128 310 Q100 356 106 398" stroke="#D9986E" stroke-width="32"/>
+      <path d="M272 304 Q310 294 318 256" stroke="#D9986E" stroke-width="32"/>
+    </g>
+    <circle cx="106" cy="402" r="19" fill="#D9986E" stroke="#1A1410" stroke-width="6.5"/>
+  </g>
+
+  <!-- ===== BADAN, KERAH & CELEMEK (Struktur Vektor yang Mulus & Terintegrasi) ===== -->
+  <g id="madre-body">
+    <!-- 1. Leher dipindah ke belakang baju agar tidak menindih kerah -->
+    <path d="M 176 210 L 224 210 L 224 270 C 224 290, 176 290, 176 270 Z" fill="#C07A4E" stroke="#1A1410" stroke-width="7" stroke-linejoin="round"/>
+    
+    <!-- 2. Baju Dasar (Cream) yang membulat halus -->
+    <path d="M 130 280 C 140 240, 170 235, 200 235 C 230 235, 260 240, 270 280 C 280 340, 290 420, 290 428 L 110 428 C 110 420, 120 340, 130 280 Z" 
+          fill="#F6EFE4" stroke="#1A1410" stroke-width="7" stroke-linejoin="round"/>
+    <ellipse cx="134" cy="288" rx="41" ry="35" fill="#F6EFE4" stroke="#1A1410" stroke-width="7"/>
+    <ellipse cx="266" cy="288" rx="41" ry="35" fill="#F6EFE4" stroke="#1A1410" stroke-width="7"/>
+    
+    <!-- 3. Selendang/Rebozo (Fill Toska) -->
+    <path d="M 165 240 C 130 245, 115 265, 110 305 C 140 290, 170 282, 200 282 C 230 282, 260 290, 290 305 C 285 265, 270 245, 235 240 C 215 252, 185 252, 165 240 Z" fill="#2BB3A3"/>
+    
+    <!-- 4. Aksen Pink (Fill Pink - Terintegrasi pas di ujung selendang tanpa outline bocor) -->
+    <path d="M 110 305 C 140 290, 170 282, 200 282 C 230 282, 260 290, 290 305 C 260 275, 230 268, 200 268 C 170 268, 140 275, 110 305 Z" fill="#E4007C"/>
+    
+    <!-- 5. Outline Selendang (Hitam - Mengunci warna toska & pink sekaligus menjadi satu bentuk licin) -->
+    <path d="M 165 240 C 130 245, 115 265, 110 305 C 140 290, 170 282, 200 282 C 230 282, 260 290, 290 305 C 285 265, 270 245, 235 240 C 215 252, 185 252, 165 240 Z" 
+          fill="none" stroke="#1A1410" stroke-width="7" stroke-linejoin="round"/>
+          
+    <!-- 6. Celemek & Tali (Disatukan menjadi SATU path agar pertemuan tali & dada mulus tanpa patahan outline) -->
+    <path d="M 114 426 
+             L 138 340 
+             C 145 338, 155 336, 160 334 
+             C 156 300, 154 260, 156 242 
+             C 162 238, 172 238, 178 242 
+             C 175 260, 173 275, 170 285 
+             C 185 292, 215 292, 230 285 
+             C 227 275, 225 260, 222 242 
+             C 228 238, 238 238, 244 242 
+             C 246 260, 244 300, 240 334 
+             C 245 336, 255 338, 262 340 
+             L 286 426 Z" 
+          fill="#FF6B1A" stroke="#1A1410" stroke-width="7" stroke-linejoin="round"/>
+          
+    <!-- 7. Garis Pinggang Celemek melengkung rapi -->
+    <path d="M 138 340 C 180 352, 220 352, 262 340" fill="none" stroke="#E85C10" stroke-width="12" stroke-linecap="round"/>
+    
+    <!-- 8. Kantong melengkung licin di bawah -->
+    <path d="M 172 366 L 228 366 C 228 410, 172 410, 172 366 Z" fill="#FF6B1A" stroke="#1A1410" stroke-width="6" stroke-linejoin="round"/>
+    <g stroke="#1A1410" stroke-width="3">
+      <circle cx="191" cy="385" r="7" fill="#E4007C"/><circle cx="209" cy="385" r="7" fill="#E4007C"/>
+      <circle cx="200" cy="376" r="7" fill="#E4007C"/><circle cx="200" cy="394" r="7" fill="#E4007C"/>
+      <circle cx="200" cy="385" r="5.5" fill="#FFB23F"/>
+    </g>
+  </g>
+
+  <!-- ===== KEPALA ===== -->
+  <g id="madre-head">
+    <ellipse cx="200" cy="56" rx="37" ry="29" fill="#E2DAD0" stroke="#1A1410" stroke-width="6"/>
+    <path d="M178 74 Q200 84 222 74" fill="none" stroke="#C4B9AC" stroke-width="5" stroke-linecap="round"/>
+    
+    <ellipse cx="128" cy="170" rx="11" ry="17" fill="#D9986E" stroke="#1A1410" stroke-width="6"/>
+    <ellipse cx="272" cy="170" rx="11" ry="17" fill="#D9986E" stroke="#1A1410" stroke-width="6"/>
+    <circle cx="128" cy="194" r="9" fill="none" stroke="#FFB23F" stroke-width="5"/>
+    <circle cx="272" cy="194" r="9" fill="none" stroke="#FFB23F" stroke-width="5"/>
+    
+    <path d="M128 152 C128 98 158 84 200 84 C242 84 272 98 272 152 C272 190 262 216 234 228 C222 234 213 237 200 237 C187 237 178 234 166 228 C138 216 128 190 128 152 Z"
+          fill="#D9986E" stroke="#1A1410" stroke-width="7" stroke-linejoin="round"/>
+    
+    <path d="M174 214 Q200 234 226 214" fill="none" stroke="#B5734A" stroke-width="5" stroke-linecap="round"/>
+    
+    <path d="M120 162 C120 38 280 38 280 162 C274 122 242 106 200 122 C158 106 126 122 120 162 Z"
+          fill="#E2DAD0" stroke="#1A1410" stroke-width="6" stroke-linejoin="round"/>
+          
+    <g fill="none" stroke="#C4B9AC" stroke-width="4" stroke-linecap="round">
+      <path d="M200 92 Q203 105 200 118"/>
+      <path d="M152 146 Q160 118 184 108"/>
+      <path d="M248 146 Q240 118 216 108"/>
+    </g>
+    
+    <path d="M148 132 Q168 120 188 130" fill="none" stroke="#B8AFA3" stroke-width="6.5" stroke-linecap="round"/>
+    <path d="M212 130 Q232 120 252 132" fill="none" stroke="#B8AFA3" stroke-width="6.5" stroke-linecap="round"/>
+    
+    <circle cx="170" cy="160" r="7.5" fill="#1A1410"/><circle cx="230" cy="160" r="7.5" fill="#1A1410"/>
+    <circle cx="167" cy="157" r="2.7" fill="#F6EFE4"/><circle cx="227" cy="157" r="2.7" fill="#F6EFE4"/>
+    
+    <g fill="#FFFFFF" fill-opacity="0.16" stroke="#1A1410" stroke-width="6.5">
+      <circle cx="170" cy="158" r="27"/><circle cx="230" cy="158" r="27"/>
+    </g>
+    
+    <path d="M196 153 Q200 147 204 153" fill="none" stroke="#1A1410" stroke-width="6" stroke-linecap="round"/>
+    <path d="M143 151 Q134 147 126 145" fill="none" stroke="#1A1410" stroke-width="6" stroke-linecap="round"/>
+    <path d="M257 151 Q266 147 274 145" fill="none" stroke="#1A1410" stroke-width="6" stroke-linecap="round"/>
+    
+    <g stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.45">
+      <path d="M157 148 Q162 143 168 142"/><path d="M217 148 Q222 143 228 142"/>
+    </g>
+    
+    <circle cx="153" cy="195" r="14.5" fill="#E8385A" opacity="0.3"/>
+    <circle cx="247" cy="195" r="14.5" fill="#E8385A" opacity="0.3"/>
+    
+    <path d="M188 184 Q200 199 212 186" fill="none" stroke="#1A1410" stroke-width="6" stroke-linecap="round"/>
+    <path d="M170 191 Q163 204 172 215" fill="none" stroke="#B5734A" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M230 191 Q237 204 228 215" fill="none" stroke="#B5734A" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M174 206 Q200 229 226 206" fill="none" stroke="#1A1410" stroke-width="6.5" stroke-linecap="round"/>
+    
+    <g stroke="#1A1410" stroke-width="4.5">
+      <circle cx="242" cy="81" r="11" fill="#E4007C"/><circle cx="256" cy="91" r="11" fill="#E4007C"/>
+      <circle cx="251" cy="108" r="11" fill="#E4007C"/><circle cx="233" cy="108" r="11" fill="#E4007C"/>
+      <circle cx="228" cy="91" r="11" fill="#E4007C"/>
+      <circle cx="242" cy="96" r="8" fill="#FFB23F"/>
+    </g>
+  </g>
+
+</svg>
+
+<div class="header-text">
+  <h1>Madre — Maskot Coook</h1>
+  <p class="sub">Versi vektor terintegrasi (Licin). Lapisan kerah, selendang, leher, dan tali celemek telah disatukan secara sempurna tanpa adanya patahan garis tumpang tindih.</p>
+</div>
+
+<div class="grid">
+
+  <!-- A -->
+  <div class="card">
+    <div class="box">
+      <svg viewBox="0 0 400 470" xmlns="http://www.w3.org/2000/svg">
+        <rect width="400" height="470" fill="#1A1410"/>
+        <rect x="16" y="16" width="368" height="438" rx="30" fill="none" stroke="#F6EFE4" stroke-width="8" opacity="0.15"/>
+        <g transform="translate(-34,6)" filter="url(#sticker)">
+          <use href="#madre-arms"/>
+          <use href="#madre-body"/>
+          <use href="#madre-head"/>
+          <path d="M318 256 L360 184" fill="none" stroke="#1A1410" stroke-width="22" stroke-linecap="round"/>
+          <path d="M318 256 L360 184" fill="none" stroke="#C98B5C" stroke-width="12" stroke-linecap="round"/>
+          <ellipse cx="368" cy="170" rx="18" ry="24" fill="#C98B5C" stroke="#1A1410" stroke-width="6" transform="rotate(30 368 170)"/>
+          <circle cx="318" cy="256" r="19" fill="#D9986E" stroke="#1A1410" stroke-width="6.5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="meta"><h2>A. Abuela — Pose "Cook"</h2><p>Pose utama: megang sendok kayu, siap ngaduk. Buat hero di landing page dan ilustrasi tombol Cook.</p></div>
+  </div>
+
+  <!-- B (avatar) -->
+  <div class="card">
+    <div class="box" style="padding: 40px 0;">
+      <svg viewBox="50 30 300 300" xmlns="http://www.w3.org/2000/svg">
+        <g clip-path="url(#avatarClip)" filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.15))">
+          <circle cx="200" cy="180" r="130" fill="#FF6B1A"/>
+          <g transform="translate(200,180) scale(0.82) translate(-200,-180)">
+            <use href="#madre-body"/>
+            <use href="#madre-head"/>
+          </g>
+        </g>
+        <circle cx="200" cy="180" r="130" fill="none" stroke="#1A1410" stroke-width="13"/>
+        <circle cx="200" cy="180" r="117" fill="none" stroke="#F6EFE4" stroke-width="5" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="meta"><h2>B. Avatar / PFP</h2><p>Crop kepala dan pundak dalam lingkaran. Buat foto profil X, favicon, dan icon token di pump.fun.</p></div>
+  </div>
+
+  <!-- C -->
+  <div class="card wide">
+    <div class="box lockup">
+      <svg viewBox="96 20 208 300" xmlns="http://www.w3.org/2000/svg">
+        <g filter="url(#stickerDark)">
+          <use href="#madre-body"/>
+          <use href="#madre-head"/>
+        </g>
+      </svg>
+      <div>
+        <span class="wm">coook</span>
+      </div>
+    </div>
+    <div class="meta"><h2>C. Lockup — Abuela + Wordmark</h2><p>Kombinasi bust Madre sama logo #5 yang lu pilih. Format buat header web, banner X, dan cover deck.</p>
+      <div class="pal">
+        <div><i style="background:#FF6B1A"></i>#FF6B1A Apron</div>
+        <div><i style="background:#2BB3A3"></i>#2BB3A3 Rebozo</div>
+        <div><i style="background:#1A1410"></i>#1A1410 Outline</div>
+        <div><i style="background:#E2DAD0"></i>#E2DAD0 Rambut</div>
+        <div><i style="background:#D9986E"></i>#D9986E Kulit</div>
+        <div><i style="background:#E4007C"></i>#E4007C Rosa</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
