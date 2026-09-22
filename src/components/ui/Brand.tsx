@@ -7,20 +7,24 @@ type BrandProps = {
 };
 
 /**
- * Logo Coook: Madre si maskot + wordmark "coook".
+ * Logo Coook: Madre si maskot saja, tanpa wordmark.
+ *
+ * Wordmark sengaja tidak dipakai di sini karena nama "coook" sudah muncul
+ * di judul halaman dan tab. Versi lengkap (maskot + wordmark) ada di
+ * public/images/coook-logo.png kalau suatu saat dibutuhkan.
  *
  * Gambarnya sudah dipotong latar (transparan), jadi menempel rapi di atas
- * warna apa pun. Sumbernya ada di public/images/ bersama versi aslinya.
+ * warna apa pun. File asli dari desainer ada di folder yang sama.
  */
 export function Brand({ href, onClick }: BrandProps) {
   const logo = (
     <Image
-      src="/images/coook-logo.png"
+      src="/images/coook-mark.png"
       alt="Coook"
-      width={2427}
-      height={864}
+      width={540}
+      height={777}
       priority
-      className="h-8 w-auto"
+      className="h-10 w-auto"
     />
   );
 
