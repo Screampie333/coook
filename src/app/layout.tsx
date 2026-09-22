@@ -1,15 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Shrikhand, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import { PrivyProviders } from "@/components/auth/PrivyProviders";
 import { AppShell } from "@/components/shell/AppShell";
 import "./globals.css";
 
 // Font wordmark di logo Coook. Dipakai juga untuk judul, supaya seluruh situs
 // terasa satu keluarga dengan logonya.
-const shrikhand = Shrikhand({
+//
+// Filenya ikut di repo (public/fonts/), bukan diambil dari Google Fonts, jadi
+// tidak ada permintaan ke server luar saat halaman dibuka.
+const shrikhand = localFont({
+  src: "../../public/fonts/shrikhand-latin-400-normal.woff2",
   variable: "--font-shrikhand",
   weight: "400",
-  subsets: ["latin"],
+  style: "normal",
+  display: "swap",
 });
 
 const spaceGrotesk = Space_Grotesk({
