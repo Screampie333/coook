@@ -11,8 +11,8 @@ type Variant = "full" | "compact";
 
 /**
  * Tombol Connect / alamat wallet + Logout.
- * - "full": untuk sidebar dan kartu (lebar penuh, ada pesan bantuan di bawah).
- * - "compact": untuk top bar mobile.
+ * - "full": untuk kartu (lebar penuh, ada pesan bantuan di bawah).
+ * - "compact": untuk top bar, di mobile maupun desktop.
  */
 export function ConnectButton({ variant = "full" }: { variant?: Variant }) {
   const enabled = usePrivyEnabled();

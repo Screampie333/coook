@@ -6,7 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
 /**
- * Kerangka semua halaman: top bar (mobile), sidebar, area utama, footer.
+ * Kerangka semua halaman: top bar (tombol Connect), sidebar, area utama, footer.
  * Di sini juga state buka/tutup drawer mobile disimpan.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {

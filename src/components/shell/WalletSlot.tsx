@@ -2,20 +2,17 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect } from "react";
-import { ConnectButton } from "@/components/auth/ConnectButton";
 import { usePrivyEnabled } from "@/components/auth/PrivyProviders";
 import { refreshImageQuota, setImageQuota, useImageQuota } from "@/components/cook/quota-store";
 
-/** Grup Wallet di sidebar: tombol Connect + sisa jatah meme hari ini. */
+/**
+ * Grup Wallet di sidebar: sisa jatah meme hari ini.
+ * Tombol Connect-nya ada di bar atas (TopBar), di mobile maupun desktop.
+ */
 export function WalletSlot() {
   const enabled = usePrivyEnabled();
 
-  return (
-    <div className="flex flex-col gap-3">
-      <ConnectButton />
-      {enabled ? <QuotaStatus /> : <StatusDot state="idle" text="Memes left: —" />}
-    </div>
-  );
+  return enabled ? <QuotaStatus /> : <StatusDot state="idle" text="Memes left: —" />;
 }
 
 function QuotaStatus() {

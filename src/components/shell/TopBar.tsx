@@ -7,11 +7,18 @@ type TopBarProps = {
   onOpen: () => void;
 };
 
-/** Bar atas yang hanya muncul di mobile: brand, tombol Connect, dan hamburger. */
+/**
+ * Bar atas.
+ * - Mobile: brand, tombol Connect, dan hamburger.
+ * - Desktop: hanya tombol Connect di kanan, karena brand dan menu sudah ada di sidebar.
+ *   Tingginya disamakan dengan kepala sidebar (77px), supaya garis bawah keduanya sejajar.
+ */
 export function TopBar({ open, onOpen }: TopBarProps) {
   return (
-    <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line bg-bg/93 px-3.5 py-2.5 backdrop-blur-md shell:hidden">
-      <Brand href="/" />
+    <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line bg-bg/93 px-3.5 py-2.5 backdrop-blur-md shell:ml-sidebar shell:justify-end shell:px-6 shell:py-5">
+      <div className="shell:hidden">
+        <Brand href="/" />
+      </div>
       <div className="flex items-center gap-2">
         <ConnectButton variant="compact" />
         <button
@@ -20,7 +27,7 @@ export function TopBar({ open, onOpen }: TopBarProps) {
           aria-label="Open menu"
           aria-expanded={open}
           aria-controls="sidebar"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[9px] border border-line bg-panel text-ink"
+          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[9px] border border-line bg-panel text-ink shell:hidden"
         >
           <Menu className="size-4.5" />
         </button>
