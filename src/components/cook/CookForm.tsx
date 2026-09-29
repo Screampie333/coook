@@ -61,7 +61,7 @@ function CookPanel({ auth }: { auth: AuthState }) {
   const [choice, setChoice] = useState<CaptionChoice>({ kind: "none" });
   const [customCaption, setCustomCaption] = useState("");
   const [cookedIdea, setCookedIdea] = useState<string | null>(null);
-  const [fileStem, setFileStem] = useState("coook-meme");
+  const [fileStem, setFileStem] = useState("kuk-meme");
 
   // Kunci sementara
   const [cooldown, setCooldown] = useState(0);
@@ -260,10 +260,10 @@ function StatusNote({
   );
 }
 
-/** Awalan nama file download, misalnya coook-meme-2026-09-17-143005 */
+/** Awalan nama file download, misalnya kuk-meme-2026-09-17-143005 */
 function memeFileStem() {
   const stamp = new Date().toISOString().slice(0, 19).replace("T", "-").replace(/:/g, "");
-  return `coook-meme-${stamp}`;
+  return `kuk-meme-${stamp}`;
 }
 
 /** "at 07:00" dalam jam lokal user, atau kalimat umum kalau waktunya tidak diketahui. */

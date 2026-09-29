@@ -8,7 +8,7 @@ export default function CookPage() {
       <Hero
         title={
           <>
-            Let it <Highlight>coook</Highlight>.
+            Let it <Highlight>kuk</Highlight>.
           </>
         }
         lede="Drop in an idea, hit Cook, and get a meme back. Like it? Serve it straight to pump.fun."

@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Coook design tokens
+   Kuk design tokens
    Diturunkan dari design-reference/styles.css (Alphet):
-   background gelap tetap, aksen lime diganti oranye Coook.
+   background gelap tetap, aksen lime diganti oranye Kuk.
    Setiap token di sini otomatis jadi class Tailwind,
    contoh: --color-panel -> bg-panel, text-panel, border-panel.
    ============================================================ */
 
 @theme {
-  /* Brand Coook */
+  /* Brand Kuk */
   --color-accent: #ff6b1a;
   --color-accent-soft: rgb(255 107 26 / 0.13);
   --color-accent-glow: rgb(255 107 26 / 0.3);
@@ -47,7 +47,7 @@
 
 /* Font meme (Anton, SIL Open Font License) untuk caption di canvas dan di galeri. */
 @font-face {
-  font-family: "Coook Meme";
+  font-family: "Kuk Meme";
   src: url("/fonts/Anton-Regular.ttf") format("truetype");
   font-display: swap;
 }
@@ -57,7 +57,7 @@
  * hasilnya sama di semua browser (paint-order belum didukung di mana-mana).
  */
 @utility meme-caption {
-  font-family: "Coook Meme", var(--font-sans);
+  font-family: "Kuk Meme", var(--font-sans);
   text-transform: uppercase;
   color: #ffffff;
   line-height: 1.05;

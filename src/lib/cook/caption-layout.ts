@@ -8,7 +8,7 @@
  */
 
 /** Nama font untuk canvas. File-nya: public/fonts/Anton-Regular.ttf (SIL Open Font License). */
-export const MEME_FONT_FAMILY = "Coook Meme";
+export const MEME_FONT_FAMILY = "Kuk Meme";
 export const MEME_FONT_URL = "/fonts/Anton-Regular.ttf";
 
 /** Bagian canvas 2D yang dibutuhkan untuk menggambar caption. */

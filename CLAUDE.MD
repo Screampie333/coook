@@ -1,7 +1,7 @@
-# Coook (coook.ink)
+# Kuk (kuk.ink)
 Web app AI untuk generate meme koin pump.fun, dengan opsi mint meme langsung jadi koin di pump.fun.
-Tidak ada integrasi X atau Telegram. Semua terjadi di coook.ink.
-Tagline: "Let it coook." Tombol generate = "Cook". Tombol mint = "Serve".
+Tidak ada integrasi X atau Telegram. Semua terjadi di kuk.ink.
+Tagline: "Let it kuk." Tombol generate = "Cook". Tombol mint = "Serve".
 Warna brand: oranye #FF6B1A (aksen utama), krem #F6EFE4, hijau #3DDC84 (status sukses).
 
 ## Desain
@@ -11,11 +11,11 @@ grup navigasi berlabel kecil, kartu dengan header ikon + judul + info di kanan, 
 tombol copy contract address, indikator status bertitik, blok CTA, footer.
 Font: Shrikhand (judul/brand, sama dengan wordmark di logo), Space Grotesk (teks), JetBrains Mono (angka, alamat wallet, ticker).
 Gaya ikon garis seperti di referensi (Lucide).
-Yang diganti: aksen lime Alphet diganti oranye Coook, background gelap tetap, logo dan teks diganti Coook.
+Yang diganti: aksen lime Alphet diganti oranye Kuk, background gelap tetap, logo dan teks diganti Kuk.
 
 Jangan copy konten Alphet (gauge, metrics, Robinhood Chain), cukup gaya visual dan komponennya.
 
-Logo yang dipakai: maskot public/images/coook-mark.png + tulisan "coook" sebagai teks (font Shrikhand).
+Logo yang dipakai: maskot public/images/coook-mark.png + tulisan "kuk" sebagai teks (font Shrikhand).
 Versi lengkap dengan wordmark: public/images/coook-logo.png.
 File asli dari desainer ada di folder yang sama dengan awalan coook-madre-final__.
 Versi yang dipakai aplikasi sudah dipotong latarnya jadi transparan, jangan ditimpa dengan yang asli.

@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
  * Header keamanan untuk semua halaman dan API.
  *
  * Yang paling penting di sini: frame-ancestors dan X-Frame-Options.
- * Tanpa keduanya, situs mana pun bisa memasang Coook di dalam iframe,
+ * Tanpa keduanya, situs mana pun bisa memasang Kuk di dalam iframe,
  * menutupinya dengan tombol palsu, lalu menipu user agar menandatangani
  * transaksi di wallet-nya. Untuk aplikasi yang menyuruh orang tanda tangan,
  * itu risiko nyata.

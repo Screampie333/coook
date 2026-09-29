@@ -172,5 +172,5 @@ function hasLifetime(
 }
 
 function unsafe(reason: string) {
-  return new LaunchError("unsafe_transaction", `Coook refused the transaction because ${reason}.`);
+  return new LaunchError("unsafe_transaction", `Kuk refused the transaction because ${reason}.`);
 }

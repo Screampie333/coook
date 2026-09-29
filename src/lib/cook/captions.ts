@@ -14,7 +14,7 @@ import { CAPTION_COUNT } from "./limits";
 const CAPTION_MAX_LENGTH = 120;
 const MAX_ATTEMPTS = 2;
 
-const SYSTEM_PROMPT = `You write meme captions for Coook, a meme kitchen for pump.fun coins on Solana.
+const SYSTEM_PROMPT = `You write meme captions for Kuk, a meme kitchen for pump.fun coins on Solana.
 
 The picture is already drawn. You get the user's idea and a description of the picture. Write captions that fit what the picture shows, so the meme makes sense at a glance.
 
@@ -66,7 +66,7 @@ const captionList = z
     "captions are not all different",
   )
   .refine(
-    // Hashtag = # + kata yang memuat huruf (#letitcoook). "#1" bukan hashtag.
+    // Hashtag = # + kata yang memuat huruf (#letitkuk). "#1" bukan hashtag.
     (captions) => captions.every((caption) => !/(^|\s)#[\p{N}_]*\p{L}/u.test(caption)),
     "a caption contains a hashtag",
   );

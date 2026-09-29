@@ -9,7 +9,7 @@ import { listRecentMemes, MEMES_PAGE_SIZE, parseCursor } from "@/lib/db/memes";
 import { isDatabaseConfigured } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Menu — Coook",
+  title: "Menu — Kuk",
 };
 
 type MenuSearchParams = { before?: string };

@@ -9,12 +9,12 @@ import { utcDay } from "./limits";
  * paling buruk satu Cook lagi menabrak error yang sama dari Cloudflare.
  */
 
-const globalStore = globalThis as typeof globalThis & { __coookOvenOutOfGasDay?: string };
+const globalStore = globalThis as typeof globalThis & { __kukOvenOutOfGasDay?: string };
 
 export function markImageProviderExhausted(now = new Date()) {
-  globalStore.__coookOvenOutOfGasDay = utcDay(now);
+  globalStore.__kukOvenOutOfGasDay = utcDay(now);
 }
 
 export function isImageProviderExhausted(now = new Date()) {
-  return globalStore.__coookOvenOutOfGasDay === utcDay(now);
+  return globalStore.__kukOvenOutOfGasDay === utcDay(now);
 }

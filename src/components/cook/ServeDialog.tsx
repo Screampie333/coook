@@ -124,7 +124,7 @@ export function ServeDialog({ memeId, picture, caption, suggestedName, onClose }
       signed = result.signedTransaction;
     } catch (signError) {
       // Paling sering: user menekan Reject di wallet.
-      console.warn("[coook] signing failed:", signError);
+      console.warn("[kuk] signing failed:", signError);
       setError("Signature cancelled in your wallet. Nothing was created.");
       setStep({ kind: "review", coin });
       return;
@@ -304,7 +304,7 @@ function FormStep({
           value={name}
           onChange={(event) => onName(event.target.value)}
           maxLength={LAUNCH.nameMaxLength}
-          placeholder="Chef Coook"
+          placeholder="Chef Kuk"
           className={fieldClass}
         />
         <Counter value={name.length} max={LAUNCH.nameMaxLength} />
@@ -321,7 +321,7 @@ function FormStep({
             value={ticker}
             onChange={(event) => onTicker(cleanTicker(event.target.value))}
             maxLength={LAUNCH.tickerMaxLength}
-            placeholder="COOOK"
+            placeholder="KUK"
             className={`${fieldClass} font-mono uppercase`}
           />
         </div>
@@ -438,7 +438,7 @@ function ReviewStep({ coin, picture, step }: { coin: PreparedCoin; picture: stri
           </div>
         </div>
         <p className="mt-1.5 text-[11px] text-dim">
-          The first line is Solana&apos;s own network fee and account rent — not something Coook or pump.fun
+          The first line is Solana&apos;s own network fee and account rent — not something Kuk or pump.fun
           charges. The second line comes back to you as your own coin.
         </p>
       </div>

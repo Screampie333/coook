@@ -41,7 +41,7 @@ function PrivyConnectButton({ variant }: { variant: Variant }) {
     onComplete: () => setError(null),
     onError: (code) => {
       // Kode asli dicatat di console supaya mudah dilacak saat testing.
-      console.warn("[coook] Privy login error:", code);
+      console.warn("[kuk] Privy login error:", code);
       setError(loginErrorMessage(code));
     },
   });

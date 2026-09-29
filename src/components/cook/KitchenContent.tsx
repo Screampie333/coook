@@ -241,7 +241,7 @@ function formatDate(iso: string) {
 /** Nama file download memakai tanggal meme itu dibuat. */
 function memeFileStem(iso: string) {
   const stamp = new Date(iso).toISOString().slice(0, 19).replace("T", "-").replace(/:/g, "");
-  return `coook-meme-${stamp}`;
+  return `kuk-meme-${stamp}`;
 }
 
 type KitchenResult =

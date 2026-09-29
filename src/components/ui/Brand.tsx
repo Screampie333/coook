@@ -7,7 +7,7 @@ type BrandProps = {
 };
 
 /**
- * Logo Coook: maskot Madre + tulisan "coook".
+ * Logo Kuk: maskot Madre + tulisan "kuk".
  *
  * Tulisannya teks biasa (font Shrikhand, sama dengan wordmark di artwork), bukan gambar,
  * supaya tetap tajam di layar apa pun dan terbaca pembaca layar.
@@ -29,14 +29,14 @@ export function Brand({ href, onClick }: BrandProps) {
         priority
         className="h-10 w-auto"
       />
-      <span className="font-display text-accent text-[25px] leading-none">coook</span>
+      <span className="font-display text-accent text-[25px] leading-none">kuk</span>
     </span>
   );
 
   if (!href) return logo;
 
   return (
-    <Link href={href} onClick={onClick} aria-label="Coook home" className="flex items-center">
+    <Link href={href} onClick={onClick} aria-label="Kuk home" className="flex items-center">
       {logo}
     </Link>
   );

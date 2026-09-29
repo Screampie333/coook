@@ -110,7 +110,7 @@ export async function prepareCreateTransaction(input: PrepareCreateInput): Promi
   if (mint && built.mintAddress !== mint.address) {
     throw new LaunchError(
       "unsafe_transaction",
-      "Coook refused the transaction because the coin address does not match the one it prepared.",
+      "Kuk refused the transaction because the coin address does not match the one it prepared.",
     );
   }
 

@@ -93,7 +93,7 @@ async function buildCreateTransaction(input: BuildCreateTransactionInput): Promi
           }),
           // Supaya di explorer kelihatan ini token latihan, bukan koin sungguhan.
           getAddMemoInstruction({
-            memo: `Coook devnet practice: ${input.name} (${input.ticker})`,
+            memo: `Kuk devnet practice: ${input.name} (${input.ticker})`,
           }),
         ],
         m,

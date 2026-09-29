@@ -36,7 +36,7 @@ type MemeCardProps = {
   onClose?: () => void;
   /** Info kecil di bawah tombol, misalnya sisa jatah. */
   hint?: string;
-  /** Awalan nama file download, misalnya "coook-meme-2026-09-17-143005". */
+  /** Awalan nama file download, misalnya "kuk-meme-2026-09-17-143005". */
   fileStem: string;
 };
 

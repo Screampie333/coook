@@ -7,7 +7,7 @@ import { shortenAddress } from "@/lib/format";
 // Alamat contract diisi lewat .env.local. Kosong = belum launch.
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? "";
 
-/** Tombol untuk menyalin contract address koin Coook. */
+/** Tombol untuk menyalin contract address koin Kuk. */
 export function ContractButton() {
   const [flash, setFlash] = useState<{ text: string; ok: boolean } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);

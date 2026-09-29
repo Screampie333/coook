@@ -1,6 +1,6 @@
-# Coook (coook.ink)
+# Kuk (kuk.ink)
 
-Let it coook. AI meme generator for pump.fun coins.
+Let it kuk. AI meme generator for pump.fun coins.
 
 ## Menjalankan di komputer
 

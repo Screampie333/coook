@@ -5,7 +5,7 @@ import { PrivyProviders } from "@/components/auth/PrivyProviders";
 import { AppShell } from "@/components/shell/AppShell";
 import "./globals.css";
 
-// Font wordmark di logo Coook. Dipakai juga untuk judul, supaya seluruh situs
+// Font wordmark di logo Kuk. Dipakai juga untuk judul, supaya seluruh situs
 // terasa satu keluarga dengan logonya.
 //
 // Filenya ikut di repo (public/fonts/), bukan diambil dari Google Fonts, jadi
@@ -31,7 +31,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Coook — Let it coook.",
+  title: "Kuk — Let it kuk.",
   description: "Cook on-brand memes for your pump.fun coin, then serve them as a coin.",
 };
 

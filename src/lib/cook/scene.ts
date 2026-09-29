@@ -32,7 +32,7 @@ const PICTURE_RULES = `Picture rules:
 
 const REJECT_RULE = `Set "rejected" to true and "scene" to an empty string if the idea asks for hate speech, slurs, harassment, sexual content, threats, attacks on real private people, or promises of profits or price targets. Otherwise set "rejected" to false.`;
 
-const SYSTEM_PROMPT = `You are the picture chef of Coook, a meme kitchen for pump.fun coins on Solana.
+const SYSTEM_PROMPT = `You are the picture chef of Kuk, a meme kitchen for pump.fun coins on Solana.
 
 Turn the user's meme idea into a description of ONE funny, visually clear picture, in at most ${SCENE_WORDS} words. Meme captions will be written for this picture afterwards.
 

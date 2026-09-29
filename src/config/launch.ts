@@ -52,7 +52,7 @@ export const LAUNCH = {
   ipfsGateway: "https://ipfs.io/ipfs/",
 
   /** Website yang dicantumkan di metadata koin. */
-  websiteUrl: "https://coook.ink",
+  websiteUrl: "https://kuk.ink",
 
   /**
    * Batas percobaan membuat koin per wallet per hari (reset 00:00 WIB, sama dengan Cook).

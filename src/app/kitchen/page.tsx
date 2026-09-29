@@ -5,7 +5,7 @@ import { Block, Hero, Highlight } from "@/components/ui/Hero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
 export const metadata: Metadata = {
-  title: "My Kitchen — Coook",
+  title: "My Kitchen — Kuk",
 };
 
 export default function KitchenPage() {

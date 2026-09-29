@@ -14,12 +14,12 @@ export async function recordCaptionChoice(memeId: string, captionIndex: number |
       body: JSON.stringify({ captionIndex }),
     });
     if (!response.ok) {
-      console.warn("[coook] could not save the caption choice:", response.status);
+      console.warn("[kuk] could not save the caption choice:", response.status);
       return false;
     }
     return true;
   } catch (error) {
-    console.warn("[coook] could not save the caption choice:", error);
+    console.warn("[kuk] could not save the caption choice:", error);
     return false;
   }
 }

@@ -8,7 +8,7 @@ import { AiError, type ModerationInput, type ModerationProvider, type Moderation
  * Docs: https://console.groq.com/docs/model/openai/gpt-oss-safeguard-20b
  *
  * KETERBATASAN: model ini hanya membaca TEKS, tidak bisa memeriksa gambar.
- * Untuk Coook ini masih cukup karena gambar meme selalu dibuat lewat prompt
+ * Untuk Kuk ini masih cukup karena gambar meme selalu dibuat lewat prompt
  * kita sendiri (lib/cook/scene.ts), bukan diunggah bebas oleh user — jadi
  * bagian paling berisiko sebelum sebuah meme jadi koin publik memang di teks:
  * nama koin, ticker, deskripsi, dan caption tulisan bebas user.
@@ -38,7 +38,7 @@ const CATEGORIES = [
  * INSTRUCTIONS, Definitions, Criteria, lalu Examples.
  */
 const POLICY = `INSTRUCTIONS
-You are a content safety filter for Coook, a website that turns user ideas into memes and can
+You are a content safety filter for Kuk, a website that turns user ideas into memes and can
 publish the result as a public, permanent cryptocurrency coin on Solana. Decide whether the text
 given by the user is safe to publish permanently and publicly as a coin's name, ticker,
 description, or caption.

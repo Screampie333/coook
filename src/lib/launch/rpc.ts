@@ -158,7 +158,7 @@ export async function assertSafeToSign(
   if (result.overheadSol > LAUNCH.maxOverheadSol) {
     throw new LaunchError(
       "unsafe_transaction",
-      `Coook refused the transaction because it would take ${result.overheadSol.toFixed(4)} SOL ` +
+      `Kuk refused the transaction because it would take ${result.overheadSol.toFixed(4)} SOL ` +
         `on top of your first buy, more than the ${LAUNCH.maxOverheadSol} SOL limit.`,
     );
   }
